@@ -1,0 +1,78 @@
+C:.
+│   file.md
+│   go.mod
+│   go.sum
+│
+├───cmd
+│   ├───api
+│   │       main.go
+│   │
+│   └───unit
+│           index.html
+│           openAPI.yaml
+│           postman.json
+│
+├───configs
+│   │   database.go
+│   │   env.go
+│   │   JWT.go
+│   │
+│   └───constants
+│           enums.go
+│           messages.go
+│
+├───internal
+│   ├───handler
+│   │       account.go
+│   │       admin.go
+│   │       media.go
+│   │       shop.go
+│   │       support.go
+│   │       upload.go
+│   │       websocket.go
+│   │
+│   ├───middlewares
+│   │       auth.go
+│   │       auth_admin.go
+│   │
+│   ├───model
+│   │   ├───db
+│   │   │       all_models.go
+│   │   │
+│   │   └───dto
+│   │           account.go
+│   │           admin.go
+│   │           shop.go
+│   │           support.go
+│   │           upload.go
+│   │           websocket.go
+│   │
+│   ├───routes
+│   │       routers.go
+│   │
+│   ├───seed
+│   │       shop.go
+│   │
+│   └───util
+│           file_upload.go
+│           jwt.go
+│           response.go
+│           websocket.go
+│
+├───media
+│   ├───chat
+│   ├───general
+│   ├───products
+│   │       48111d67f4b61629.png
+│   │       dummy_image1.png
+│   │       dummy_image2.png
+│   │       dummy_image3.png
+│   │       dummy_image4.png
+│   │
+│   ├───support
+│   └───temp
+└───structur
+    │   path.txt
+    │
+    └───note
+            problems.txt

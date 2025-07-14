@@ -1,0 +1,3023 @@
+openapi: 3.0.0
+info:
+  title: Portolio Backend API
+  description: API untuk platform e-commerce Portolio, menyediakan fungsionalitas untuk manajemen akun, produk, transaksi, dukungan, dan admin.
+  version: 1.0.0
+servers:
+  - url: http://localhost:8080/api
+    description: Server Pengembangan Lokal
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: Token JWT untuk pengguna biasa (user). Diterima setelah login.
+    AdminAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: Token JWT khusus untuk admin. Diterima setelah login admin.
+
+  schemas:
+    # --- General Responses ---
+    ErrorResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          example: error
+        code:
+          type: integer
+          example: 400
+        message:
+          type: string
+          example: Validasi gagal. Mohon periksa kembali input Anda.
+        fields:
+          type: array
+          items:
+            type: object
+            properties:
+              field:
+                type: string
+                example: email
+              reason:
+                type: string
+                example: email harus berupa alamat email yang valid.
+        example_request:
+          type: object
+          description: Contoh body request yang diharapkan jika validasi gagal.
+          additionalProperties: true
+        timestamp:
+          type: string
+          format: date-time
+          example: "2023-10-27T10:00:00Z"
+    SuccessResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          example: success
+        code:
+          type: integer
+          example: 200
+        message:
+          type: string
+          example: Operasi berhasil.
+        data:
+          type: object
+          additionalProperties: true
+        timestamp:
+          type: string
+          format: date-time
+          example: "2023-10-27T10:00:00Z"
+
+    # --- Enums ---
+    UserRole:
+      type: string
+      enum: [ "admin", "user", "guest" ]
+      example: user
+    UserStatus:
+      type: string
+      enum: [ "active", "suspended", "banned" ]
+      example: active
+    ProductVisibility:
+      type: string
+      enum: [ "all", "owner_admin", "admin_only" ]
+      example: all
+    TransactionStatus:
+      type: string
+      enum: [ "pending", "waiting_owner", "waiting_users", "success", "cancel" ]
+      example: pending
+    ReceiptStatus:
+      type: string
+      enum: [ "PENDING_PROCESS", "COMPLETED", "CANCELED" ]
+      example: PENDING_PROCESS
+    BalanceStatus:
+      type: string
+      enum: [ "credit", "debit", "refund" ]
+      example: credit
+    NotificationType:
+      type: string
+      enum: [ "purchase", "sale", "topup", "withdraw", "chat", "support", "account_status" ]
+      example: purchase
+    ChatMessageType:
+      type: string
+      enum: [ "text", "image", "file" ]
+      example: text
+    SupportTicketStatus:
+      type: string
+      enum: [ "open", "pending_admin", "pending_user", "closed", "transferred", "canceled" ]
+      example: open
+
+    # --- Account DTOs ---
+    RequestPostRegister:
+      type: object
+      required:
+        - full_name
+        - email
+        - password
+      properties:
+        full_name:
+          type: string
+          minLength: 3
+          maxLength: 100
+          example: John Doe
+        email:
+          type: string
+          format: email
+          example: john.doe@example.com
+        password:
+          type: string
+          minLength: 8
+          description: Minimal 8 karakter, mengandung setidaknya satu angka dan satu simbol.
+          example: Password123!
+    PostRegisterResponse:
+      type: object
+      properties:
+        full_name:
+          type: string
+          example: John Doe
+        email:
+          type: string
+          example: john.doe@example.com
+        balance:
+          type: integer
+          format: uint
+          example: 0
+        created_at:
+          type: string
+          format: date-time
+          example: "2023-10-27T10:00:00Z"
+    RequestPostLogin:
+      type: object
+      required:
+        - email
+        - password
+      properties:
+        email:
+          type: string
+          format: email
+          example: user@user.com
+        password:
+          type: string
+          example: "@users123"
+    RequestTopUp:
+      type: object
+      required:
+        - amount
+      properties:
+        amount:
+          type: integer
+          format: uint
+          minimum: 1
+          maximum: 10000000
+          example: 50000
+    RequestWithdraw:
+      type: object
+      required:
+        - amount
+      properties:
+        amount:
+          type: integer
+          format: uint
+          minimum: 10000
+          maximum: 10000000
+          example: 25000
+    RequestPatchAccount:
+      type: object
+      properties:
+        full_name:
+          type: string
+          minLength: 3
+          maxLength: 100
+          example: Jane Doe Updated
+        email:
+          type: string
+          format: email
+          example: jane.doe.updated@example.com
+        old_password:
+          type: string
+          example: Password123!
+        new_password:
+          type: string
+          minLength: 8
+          description: Minimal 8 karakter, mengandung setidaknya satu angka dan satu simbol.
+          example: NewPassword123!
+    BalanceHistoryResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: uint
+          example: 1
+        created_at:
+          type: string
+          example: "2006-01-02 15:04:05"
+        updated_at:
+          type: string
+          example: "2006-01-02 15:04:05"
+        description:
+          type: string
+          example: Top Up saldo sebesar 50000
+        amount:
+          type: integer
+          example: 50000
+        last_balance:
+          type: integer
+          format: uint
+          example: 0
+        final_balance:
+          type: integer
+          format: uint
+          example: 50000
+        status:
+          $ref: '#/components/schemas/BalanceStatus'
+    GetBalanceResponse:
+      type: object
+      properties:
+        balance:
+          type: integer
+          format: uint
+          example: 50000
+        histories:
+          type: array
+          items:
+            $ref: '#/components/schemas/BalanceHistoryResponse'
+    PostTopUpResponse:
+      type: object
+      properties:
+        message:
+          type: string
+          example: Top up berhasil! Saldo Anda telah diperbarui.
+        full_name:
+          type: string
+          example: John Doe
+        new_balance:
+          type: integer
+          format: uint
+          example: 50000
+        balance_entry:
+          $ref: '#/components/schemas/BalanceHistoryResponse'
+    PostWithdrawResponse:
+      type: object
+      properties:
+        message:
+          type: string
+          example: Penarikan dana berhasil! Dana akan segera diproses.
+        full_name:
+          type: string
+          example: John Doe
+        new_balance:
+          type: integer
+          format: uint
+          example: 25000
+        balance_entry:
+          $ref: '#/components/schemas/BalanceHistoryResponse'
+
+    # --- Shop DTOs ---
+    ProductImageResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: uint
+          example: 1
+        product_id:
+          type: integer
+          format: uint
+          example: 1
+        image_url:
+          type: string
+          example: /media/products/dummy_image1.png
+    ReviewResponse:
+      type: object
+      properties:
+        user_id:
+          type: integer
+          format: uint
+          example: 2
+        full_name:
+          type: string
+          example: Buyer User
+        rating:
+          type: integer
+          format: uint
+          minimum: 1
+          maximum: 5
+          example: 5
+        comment:
+          type: string
+          example: Produk sangat bagus!
+    GetProductsResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: uint
+          example: 1
+        title:
+          type: string
+          example: Indomie Goreng
+        price:
+          type: integer
+          format: uint
+          example: 3000
+        stock:
+          type: integer
+          format: uint
+          example: 100
+        categories:
+          type: array
+          items:
+            type: string
+          example: ["Makanan", "Mie Instan"]
+        images:
+          type: array
+          items:
+            $ref: '#/components/schemas/ProductImageResponse'
+        rating:
+          type: number
+          format: float
+          example: 4.5
+        reviews:
+          type: array
+          items:
+            $ref: '#/components/schemas/ReviewResponse'
+    RequestPostProduct:
+      type: object
+      required:
+        - title
+        - price
+        - stock
+      properties:
+        title:
+          type: string
+          minLength: 5
+          maxLength: 100
+          example: Gaming Mouse RGB
+        price:
+          type: integer
+          format: uint
+          minimum: 1000
+          maximum: 100000000
+          example: 250000
+        stock:
+          type: integer
+          format: uint
+          minimum: 0
+          maximum: 10000
+          example: 50
+        visibility:
+          $ref: '#/components/schemas/ProductVisibility'
+          description: Default 'all'. 'owner_admin' untuk menyembunyikan dari publik.
+        categories:
+          type: string
+          maxLength: 255
+          example: Electronics,Gaming
+        images_links:
+          type: array
+          items:
+            type: string
+            format: url
+          description: Opsional. URL gambar yang akan diunduh dan disimpan.
+          example: ["https://example.com/mouse1.jpg", "https://example.com/mouse2.jpg"]
+    RequestPutProduct:
+      type: object
+      properties:
+        title:
+          type: string
+          minLength: 5
+          maxLength: 100
+          example: Gaming Mouse Pro X
+        price:
+          type: integer
+          format: uint
+          minimum: 1000
+          maximum: 100000000
+          example: 300000
+        stock:
+          type: integer
+          format: uint
+          minimum: 0
+          maximum: 10000
+          example: 45
+        visibility:
+          $ref: '#/components/schemas/ProductVisibility'
+          description: Default 'all'. 'owner_admin' untuk menyembunyikan dari publik.
+        categories:
+          type: string
+          maxLength: 255
+          example: Electronics,Gaming,Peripherals
+        images_links:
+          type: array
+          items:
+            type: string
+            format: url
+          description: Opsional. URL gambar baru yang akan diunduh dan disimpan.
+          example: ["https://example.com/mouse_new.jpg"]
+        is_active:
+          type: boolean
+          example: true
+    ProductDetailResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: uint
+          example: 1
+        user_id:
+          type: integer
+          format: uint
+          example: 2
+        title:
+          type: string
+          example: Gaming Mouse RGB
+        price:
+          type: integer
+          format: uint
+          example: 250000
+        stock:
+          type: integer
+          format: uint
+          example: 50
+        visibility:
+          $ref: '#/components/schemas/ProductVisibility'
+        categories:
+          type: array
+          items:
+            type: string
+          example: ["Electronics", "Gaming"]
+        is_active:
+          type: boolean
+          example: true
+        images:
+          type: array
+          items:
+            $ref: '#/components/schemas/ProductImageResponse'
+        created_at:
+          type: string
+          format: date-time
+          example: "2023-10-27T10:00:00Z"
+        updated_at:
+          type: string
+          format: date-time
+          example: "2023-10-27T10:00:00Z"
+        deleted_at:
+          type: string
+          format: date-time
+          nullable: true
+          example: null
+    RequestPurchaseItem:
+      type: object
+      required:
+        - product_id
+        - quantity
+      properties:
+        product_id:
+          type: integer
+          format: uint
+          example: 1
+        quantity:
+          type: integer
+          format: uint
+          minimum: 1
+          example: 1
+    RequestConfirmTransactionByOwner:
+      type: object
+      required:
+        - transaction_ids
+      properties:
+        transaction_ids:
+          type: array
+          items:
+            type: integer
+            format: uint
+            minimum: 1
+          example: [1, 2]
+    ReviewItem:
+      type: object
+      required:
+        - transaction_id
+      properties:
+        transaction_id:
+          type: integer
+          format: uint
+          example: 1
+        rating:
+          type: integer
+          format: uint
+          minimum: 1
+          maximum: 5
+          nullable: true
+          example: 5
+        comment:
+          type: string
+          maxLength: 500
+          example: Produk sesuai deskripsi dan pengiriman cepat!
+    RequestConfirmTransactionByUser:
+      type: object
+      required:
+        - transaction_ids
+      properties:
+        transaction_ids:
+          type: array
+          items:
+            type: integer
+            format: uint
+            minimum: 1
+          example: [1]
+        reviews:
+          type: array
+          items:
+            $ref: '#/components/schemas/ReviewItem'
+          description: Opsional. Ulasan untuk setiap transaksi yang dikonfirmasi.
+    RequestCancelTransaction:
+      type: object
+      required:
+        - transaction_ids
+      properties:
+        transaction_ids:
+          type: array
+          items:
+            type: integer
+            format: uint
+            minimum: 1
+          example: [1]
+    ProductDetailInCart:
+      type: object
+      properties:
+        title:
+          type: string
+          example: Indomie Goreng
+        price:
+          type: integer
+          format: uint
+          example: 3000
+        images:
+          type: array
+          items:
+            $ref: '#/components/schemas/ProductImageResponse'
+    UserDetailInCart:
+      type: object
+      properties:
+        full_name:
+          type: string
+          example: John Doe
+    CartProduct:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: uint
+          example: 1
+        created_at:
+          type: string
+          format: date-time
+          example: "2023-10-27T10:00:00Z"
+        updated_at:
+          type: string
+          format: date-time
+          example: "2023-10-27T10:00:00Z"
+        product_id:
+          type: integer
+          format: uint
+          example: 1
+        user_id:
+          type: integer
+          format: uint
+          example: 2
+        quantity:
+          type: integer
+          format: uint
+          example: 2
+        total_price:
+          type: integer
+          format: uint
+          example: 6000
+        govt_tax:
+          type: integer
+          format: uint
+          example: 300
+        ecommerce_tax:
+          type: integer
+          format: uint
+          example: 120
+        status:
+          $ref: '#/components/schemas/TransactionStatus'
+        is_solved:
+          type: boolean
+          example: false
+        receipt_status:
+          $ref: '#/components/schemas/ReceiptStatus'
+        product:
+          $ref: '#/components/schemas/ProductDetailInCart'
+        user:
+          $ref: '#/components/schemas/UserDetailInCart'
+        image_url:
+          type: string
+          example: /media/products/dummy_image1.png
+    GetOwnerProductOrdersResponse:
+      type: object
+      properties:
+        total_records:
+          type: integer
+          format: int60
+          example: 1
+        page:
+          type: integer
+          example: 1
+        limit:
+          type: integer
+          example: 20
+        orders:
+          type: array
+          items:
+            type: object # Simplified, would be db.TransactionHistory
+            properties:
+              id:
+                type: integer
+                format: uint
+                example: 1
+              product_id:
+                type: integer
+                format: uint
+                example: 1
+              user_id:
+                type: integer
+                format: uint
+                example: 2
+              quantity:
+                type: integer
+                format: uint
+                example: 1
+              total_price:
+                type: integer
+                format: uint
+                example: 3000
+              status:
+                $ref: '#/components/schemas/TransactionStatus'
+              created_at:
+                type: string
+                format: date-time
+                example: "2023-10-27T10:00:00Z"
+              product:
+                type: object # Simplified, would be db.Product
+                properties:
+                  title:
+                    type: string
+                    example: Indomie Goreng
+              user:
+                type: object # Simplified, would be db.User
+                properties:
+                  full_name:
+                    type: string
+                    example: Buyer User
+
+    # --- Admin DTOs ---
+    AdminLoginRequest:
+      type: object
+      required:
+        - email
+        - password
+      properties:
+        email:
+          type: string
+          format: email
+          example: admin@admin.com
+        password:
+          type: string
+          example: "@admin123"
+    UserDetailResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: uint
+          example: 1
+        full_name:
+          type: string
+          example: Admin User
+        email:
+          type: string
+          example: admin@admin.com
+        role:
+          $ref: '#/components/schemas/UserRole'
+        balance:
+          type: integer
+          format: uint
+          example: 500000
+        status:
+          $ref: '#/components/schemas/UserStatus'
+        ban_until:
+          type: integer
+          format: int64
+          nullable: true
+          example: 1678886400 # Unix timestamp
+        ban_reason:
+          type: string
+          nullable: true
+          example: Melanggar kebijakan penggunaan berulang kali.
+        penalty_warnings:
+          type: integer
+          format: uint
+          example: 0
+        created_at:
+          type: string
+          format: date-time
+          example: "2023-10-27T10:00:00Z"
+        updated_at:
+          type: string
+          format: date-time
+          example: "2023-10-27T10:00:00Z"
+        deleted_at:
+          type: string
+          format: date-time
+          nullable: true
+          example: null
+    GetUsersResponse:
+      type: object
+      properties:
+        total_records:
+          type: integer
+          format: int64
+          example: 3
+        page:
+          type: integer
+          example: 1
+        limit:
+          type: integer
+          example: 20
+        users:
+          type: array
+          items:
+            $ref: '#/components/schemas/UserDetailResponse'
+    RequestSuspendUser:
+      type: object
+      required:
+        - reason
+      properties:
+        reason:
+          type: string
+          minLength: 10
+          maxLength: 255
+          example: Melanggar kebijakan penggunaan berulang kali.
+    RequestBanUser:
+      type: object
+      required:
+        - duration_hours
+        - reason
+      properties:
+        duration_hours:
+          type: integer
+          minimum: 1
+          maximum: 8760 # 1 year
+          example: 24
+        reason:
+          type: string
+          minLength: 10
+          maxLength: 255
+          example: Melakukan penipuan dan penyalahgunaan sistem.
+    GetProductsRequestAdmin:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: uint
+          example: 1
+        title:
+          type: string
+          example: Indomie Goreng
+        price:
+          type: integer
+          format: uint
+          example: 3000
+        stock:
+          type: integer
+          format: uint
+          example: 100
+        visibility:
+          $ref: '#/components/schemas/ProductVisibility'
+        categories:
+          type: array
+          items:
+            type: string
+          example: ["Makanan", "Mie Instan"]
+        images:
+          type: array
+          items:
+            $ref: '#/components/schemas/ProductImageResponse'
+        rating:
+          type: number
+          format: float
+          example: 4.5
+        reviews:
+          type: array
+          items:
+            $ref: '#/components/schemas/ReviewResponse'
+        user_id:
+          type: integer
+          format: uint
+          example: 2
+        user_email:
+          type: string
+          example: user@user.com
+        is_active:
+          type: boolean
+          example: true
+        created_at:
+          type: string
+          format: date-time
+          example: "2023-10-27T10:00:00Z"
+        updated_at:
+          type: string
+          format: date-time
+          example: "2023-10-27T10:00:00Z"
+        deleted_at:
+          type: string
+          format: date-time
+          nullable: true
+          example: null
+    GetProductsAdminResponse:
+      type: object
+      properties:
+        total_records:
+          type: integer
+          format: int64
+          example: 4
+        page:
+          type: integer
+          example: 1
+        limit:
+          type: integer
+          example: 20
+        products:
+          type: array
+          items:
+            $ref: '#/components/schemas/GetProductsRequestAdmin'
+    RequestPatchTransactionStatus:
+      type: object
+      required:
+        - status
+      properties:
+        status:
+          $ref: '#/components/schemas/TransactionStatus'
+          description: Status baru transaksi.
+        reason:
+          type: string
+          description: Opsional. Alasan perubahan status oleh admin.
+          example: Konfirmasi manual karena masalah teknis.
+    TransactionDetailResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: uint
+          example: 1
+        product_id:
+          type: integer
+          format: uint
+          example: 1
+        user_id:
+          type: integer
+          format: uint
+          example: 2
+        quantity:
+          type: integer
+          format: uint
+          example: 1
+        total_price:
+          type: integer
+          format: uint
+          example: 3000
+        govt_tax:
+          type: integer
+          format: uint
+          example: 150
+        ecommerce_tax:
+          type: integer
+          format: uint
+          example: 60
+        status:
+          $ref: '#/components/schemas/TransactionStatus'
+        is_solved:
+          type: boolean
+          example: false
+        receipt_status:
+          $ref: '#/components/schemas/ReceiptStatus'
+        created_at:
+          type: string
+          format: date-time
+          example: "2023-10-27T10:00:00Z"
+        updated_at:
+          type: string
+          format: date-time
+          example: "2023-10-27T10:00:00Z"
+        product:
+          $ref: '#/components/schemas/ProductDetailResponse'
+        user:
+          $ref: '#/components/schemas/UserDetailResponse'
+    GetTransactionsResponse:
+      type: object
+      properties:
+        total_records:
+          type: integer
+          format: int64
+          example: 1
+        page:
+          type: integer
+          example: 1
+        limit:
+          type: integer
+          example: 20
+        transactions:
+          type: array
+          items:
+            $ref: '#/components/schemas/TransactionDetailResponse'
+    BalanceHistoryDetailResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: uint
+          example: 1
+        user_id:
+          type: integer
+          format: uint
+          example: 2
+        description:
+          type: string
+          example: Top Up saldo sebesar 50000
+        amount:
+          type: integer
+          example: 50000
+        last_balance:
+          type: integer
+          format: uint
+          example: 0
+        final_balance:
+          type: integer
+          format: uint
+          example: 50000
+        status:
+          $ref: '#/components/schemas/BalanceStatus'
+        created_at:
+          type: string
+          format: date-time
+          example: "2023-10-27T10:00:00Z"
+        updated_at:
+          type: string
+          format: date-time
+          example: "2023-10-27T10:00:00Z"
+        user:
+          $ref: '#/components/schemas/UserDetailResponse'
+    GetBalanceHistoriesResponse:
+      type: object
+      properties:
+        total_records:
+          type: integer
+          format: int64
+          example: 2
+        page:
+          type: integer
+          example: 1
+        limit:
+          type: integer
+          example: 20
+        histories:
+          type: array
+          items:
+            $ref: '#/components/schemas/BalanceHistoryDetailResponse'
+    GetTopUpWithdrawLogsResponse:
+      type: object
+      properties:
+        total_records:
+          type: integer
+          format: int64
+          example: 2
+        page:
+          type: integer
+          example: 1
+        limit:
+          type: integer
+          example: 20
+        logs:
+          type: array
+          items:
+            $ref: '#/components/schemas/BalanceHistoryDetailResponse'
+
+    # --- Support DTOs ---
+    RequestCreateTicket:
+      type: object
+      required:
+        - subject
+        - message
+      properties:
+        subject:
+          type: string
+          minLength: 10
+          maxLength: 150
+          example: Masalah dengan pesanan yang belum sampai
+        message:
+          type: string
+          minLength: 20
+          maxLength: 1000
+          example: Saya memesan produk A dengan ID 123 pada tanggal X, namun sampai sekarang belum ada kabar.
+    SupportTicketResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: uint
+          example: 1
+        user_id:
+          type: integer
+          format: uint
+          example: 2
+        subject:
+          type: string
+          example: Masalah dengan pesanan yang belum sampai
+        status:
+          $ref: '#/components/schemas/SupportTicketStatus'
+        assigned_admin_id:
+          type: integer
+          format: uint
+          nullable: true
+          example: 1
+        assigned_admin_name:
+          type: string
+          nullable: true
+          example: Admin User
+        queue_number:
+          type: integer
+          format: uint
+          example: 1
+        created_at:
+          type: string
+          format: date-time
+          example: "2023-10-27T10:00:00Z"
+        updated_at:
+          type: string
+          format: date-time
+          example: "2023-10-27T10:00:00Z"
+    GetSupportTicketsResponse:
+      type: object
+      properties:
+        total_records:
+          type: integer
+          format: int64
+          example: 1
+        page:
+          type: integer
+          example: 1
+        limit:
+          type: integer
+          example: 20
+        tickets:
+          type: array
+          items:
+            $ref: '#/components/schemas/SupportTicketResponse'
+    SupportMessageResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: uint
+          example: 1
+        ticket_id:
+          type: integer
+          format: uint
+          example: 1
+        sender_id:
+          type: integer
+          format: uint
+          example: 2
+        sender_name:
+          type: string
+          example: John Doe
+        is_admin:
+          type: boolean
+          example: false
+        content:
+          type: string
+          example: Saya memesan produk A dengan ID 123 pada tanggal X, namun sampai sekarang belum ada kabar.
+        message_type:
+          $ref: '#/components/schemas/ChatMessageType'
+        file_url:
+          type: string
+          nullable: true
+          example: null
+        created_at:
+          type: string
+          format: date-time
+          example: "2023-10-27T10:00:00Z"
+    GetSupportTicketMessagesResponse:
+      type: object
+      properties:
+        ticket_id:
+          type: integer
+          format: uint
+          example: 1
+        subject:
+          type: string
+          example: Masalah dengan pesanan yang belum sampai
+        status:
+          $ref: '#/components/schemas/SupportTicketStatus'
+        messages:
+          type: array
+          items:
+            $ref: '#/components/schemas/SupportMessageResponse'
+    RequestReplyTicket:
+      type: object
+      required:
+        - message_type
+      properties:
+        content:
+          type: string
+          maxLength: 1000
+          description: Diperlukan jika message_type adalah 'text'.
+          example: Terima kasih atas informasinya, kami akan segera menindaklanjuti.
+        message_type:
+          $ref: '#/components/schemas/ChatMessageType'
+        file_url:
+          type: string
+          format: url
+          description: Diperlukan jika message_type adalah 'image' atau 'file'.
+          example: http://localhost:8080/media/support/example.pdf
+
+    # --- Upload DTOs ---
+    UploadFileResponse:
+      type: object
+      properties:
+        message:
+          type: string
+          example: File berhasil diunggah!
+        file_url:
+          type: string
+          example: /media/general/randomfilename.png
+        file_name:
+          type: string
+          example: my_image.png
+        file_size:
+          type: integer
+          format: int64
+          example: 123456
+
+    # --- WebSocket DTOs ---
+    RequestSendMessage:
+      type: object
+      required:
+        - message_type
+      properties:
+        transaction_id:
+          type: integer
+          format: uint
+          description: ID transaksi yang terkait dengan pesan chat.
+          example: 1
+        message_type:
+          $ref: '#/components/schemas/ChatMessageType'
+        content:
+          type: string
+          maxLength: 1000
+          description: Diperlukan jika message_type adalah 'text'.
+          example: Halo, apakah produk ini masih tersedia?
+        file_url:
+          type: string
+          format: url
+          description: Diperlukan jika message_type adalah 'image' atau 'file'.
+          example: http://localhost:8080/media/chat/randomimage.jpg
+    ChatMessageResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: uint
+          example: 1
+        transaction_id:
+          type: integer
+          format: uint
+          example: 1
+        sender_id:
+          type: integer
+          format: uint
+          example: 2
+        sender_name:
+          type: string
+          example: John Doe
+        message_type:
+          $ref: '#/components/schemas/ChatMessageType'
+        content:
+          type: string
+          example: Halo, apakah produk ini masih tersedia?
+        file_url:
+          type: string
+          nullable: true
+          example: null
+        created_at:
+          type: string
+          format: date-time
+          example: "2023-10-27T10:00:00Z"
+    NotificationResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: uint
+          example: 1
+        user_id:
+          type: integer
+          format: uint
+          example: 2
+        type:
+          $ref: '#/components/schemas/NotificationType'
+        message:
+          type: string
+          example: Anda memiliki pesan baru dari user ID 1 terkait transaksi ID 1.
+        related_id:
+          type: integer
+          format: uint
+          nullable: true
+          example: 1
+        created_at:
+          type: string
+          format: date-time
+          example: "2023-10-27T10:00:00Z"
+        is_read:
+          type: boolean
+          example: false
+    ChatMessageWebSocketResponse:
+      type: object
+      properties:
+        type:
+          type: string
+          example: chat_message
+        message:
+          $ref: '#/components/schemas/ChatMessageResponse'
+    SuccessMessageWebSocketResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          example: success
+        message:
+          type: string
+          example: Pesan berhasil dikirim dan disimpan.
+        chat_message:
+          $ref: '#/components/schemas/ChatMessageResponse'
+    NotificationWebSocketResponse:
+      type: object
+      properties:
+        type:
+          type: string
+          example: notification
+        message:
+          $ref: '#/components/schemas/NotificationResponse'
+
+paths:
+  # --- Account Endpoints ---
+  /account/register:
+    post:
+      summary: Registrasi Pengguna Baru
+      tags: [Account]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RequestPostRegister'
+      responses:
+        '201':
+          description: Akun berhasil dibuat.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PostRegisterResponse'
+        '400':
+          $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          $ref: '#/components/schemas/ErrorResponse'
+  /account/login:
+    post:
+      summary: Login Pengguna
+      tags: [Account]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RequestPostLogin'
+      responses:
+        '200':
+          description: Login berhasil. Token JWT dikembalikan di header Authorization.
+          headers:
+            Authorization:
+              schema:
+                type: string
+                example: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+                example:
+                  status: success
+                  code: 200
+                  message: Login berhasil! Selamat datang kembali.
+                  timestamp: "2023-10-27T10:00:00Z"
+        '401':
+          $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          $ref: '#/components/schemas/ErrorResponse'
+  /account/balance:
+    get:
+      summary: Mendapatkan Saldo dan Riwayat Saldo Pengguna
+      tags: [Account]
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 50
+          description: Jumlah riwayat saldo yang akan diambil.
+      responses:
+        '200':
+          description: Saldo dan riwayat saldo berhasil diambil.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetBalanceResponse'
+        '401':
+          $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          $ref: '#/components/schemas/ErrorResponse'
+  /account/topup:
+    post:
+      summary: Top Up Saldo Pengguna
+      tags: [Account]
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RequestTopUp'
+      responses:
+        '200':
+          description: Top up berhasil.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PostTopUpResponse'
+        '400':
+          $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          $ref: '#/components/schemas/ErrorResponse'
+  /account/withdraw:
+    post:
+      summary: Penarikan Saldo Pengguna
+      tags: [Account]
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RequestWithdraw'
+      responses:
+        '200':
+          description: Penarikan dana berhasil.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PostWithdrawResponse'
+        '400':
+          $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          $ref: '#/components/schemas/ErrorResponse'
+  /account:
+    patch:
+      summary: Memperbarui Informasi Akun Pengguna
+      tags: [Account]
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RequestPatchAccount'
+      responses:
+        '200':
+          description: Akun berhasil diperbarui.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+                example:
+                  status: success
+                  code: 200
+                  message: Akun berhasil diperbarui!
+                  timestamp: "2023-10-27T10:00:00Z"
+        '400':
+          $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          $ref: '#/components/schemas/ErrorResponse'
+
+  # --- Shop Endpoints ---
+  /shop/products:
+    get:
+      summary: Mendapatkan Daftar Produk (Publik)
+      tags: [Shop]
+      description: Mengambil daftar produk yang terlihat publik. Dapat diakses oleh tamu, pengguna, dan admin.
+      parameters:
+        - in: query
+          name: page
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+          description: Nomor halaman.
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            minimum: 1
+            default: 10
+          description: Jumlah item per halaman.
+      responses:
+        '200':
+          description: Daftar produk berhasil diambil.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/GetProductsResponse'
+        '500':
+          $ref: '#/components/schemas/ErrorResponse'
+    post:
+      summary: Membuat Produk Baru
+      tags: [Shop]
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RequestPostProduct'
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                title:
+                  type: string
+                  minLength: 5
+                  maxLength: 100
+                  example: Gaming Mouse RGB
+                price:
+                  type: integer
+                  format: uint
+                  minimum: 1000
+                  maximum: 100000000
+                  example: 250000
+                stock:
+                  type: integer
+                  format: uint
+                  minimum: 0
+                  maximum: 10000
+                  example: 50
+                visibility:
+                  $ref: '#/components/schemas/ProductVisibility'
+                  description: Default 'all'. 'owner_admin' untuk menyembunyikan dari publik.
+                categories:
+                  type: string
+                  maxLength: 255
+                  example: Electronics,Gaming
+                images:
+                  type: array
+                  items:
+                    type: string
+                    format: binary
+                  description: File gambar yang akan diunggah.
+      responses:
+        '201':
+          description: Produk berhasil dibuat.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProductDetailResponse'
+        '400':
+          $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          $ref: '#/components/schemas/ErrorResponse'
+  /shop/products/{id}:
+    put:
+      summary: Memperbarui Produk yang Ada
+      tags: [Shop]
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          schema:
+            type: integer
+            format: uint
+            example: 1
+          required: true
+          description: ID produk yang akan diperbarui.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RequestPutProduct'
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                title:
+                  type: string
+                  minLength: 5
+                  maxLength: 100
+                  example: Gaming Mouse Pro X
+                price:
+                  type: integer
+                  format: uint
+                  minimum: 1000
+                  maximum: 100000000
+                  example: 300000
+                stock:
+                  type: integer
+                  format: uint
+                  minimum: 0
+                  maximum: 10000
+                  example: 45
+                visibility:
+                  $ref: '#/components/schemas/ProductVisibility'
+                  description: Default 'all'. 'owner_admin' untuk menyembunyikan dari publik.
+                categories:
+                  type: string
+                  maxLength: 255
+                  example: Electronics,Gaming,Peripherals
+                images:
+                  type: array
+                  items:
+                    type: string
+                    format: binary
+                  description: File gambar baru yang akan diunggah.
+                is_active:
+                  type: boolean
+                  example: true
+      responses:
+        '200':
+          description: Produk berhasil diperbarui.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProductDetailResponse'
+        '400':
+          $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          $ref: '#/components/schemas/ErrorResponse'
+    delete:
+      summary: Menghapus Produk (Soft Delete)
+      tags: [Shop]
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          schema:
+            type: integer
+            format: uint
+            example: 1
+          required: true
+          description: ID produk yang akan dihapus.
+      responses:
+        '200':
+          description: Produk berhasil dihapus.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+                example:
+                  status: success
+                  code: 200
+                  message: Produk berhasil dihapus! Semua transaksi tertunda terkait telah ditangani.
+                  timestamp: "2023-10-27T10:00:00Z"
+        '401':
+          $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          $ref: '#/components/schemas/ErrorResponse'
+  /shop/products/{id}/visibility:
+    patch:
+      summary: Mengubah Visibilitas Produk
+      tags: [Shop]
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          schema:
+            type: integer
+            format: uint
+            example: 1
+          required: true
+          description: ID produk yang akan diubah visibilitasnya.
+      description: Mengubah visibilitas produk antara 'all' (terlihat publik) dan 'owner_admin' (hanya terlihat oleh pemilik dan admin).
+      responses:
+        '200':
+          description: Visibilitas produk berhasil diubah.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+                example:
+                  status: success
+                  code: 200
+                  message: Visibilitas produk berhasil diubah menjadi 'owner_admin' (tersembunyi dari publik).
+                  timestamp: "2023-10-27T10:00:00Z"
+        '400':
+          $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          $ref: '#/components/schemas/ErrorResponse'
+  /shop/orders:
+    get:
+      summary: Mendapatkan Riwayat Pesanan Pembeli (Keranjang)
+      tags: [Shop]
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: query
+          name: page
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+          description: Nomor halaman.
+      responses:
+        '200':
+          description: Riwayat pesanan berhasil diambil.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/CartProduct'
+        '401':
+          $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          $ref: '#/components/schemas/ErrorResponse'
+  /shop/purchase:
+    post:
+      summary: Melakukan Pembelian Produk
+      tags: [Shop]
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                $ref: '#/components/schemas/RequestPurchaseItem'
+      responses:
+        '200':
+          description: Pembelian berhasil.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+                example:
+                  status: success
+                  code: 200
+                  message: Pembelian berhasil! Menunggu konfirmasi penjual.
+                  timestamp: "2023-10-27T10:00:00Z"
+        '400':
+          $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          $ref: '#/components/schemas/ErrorResponse'
+  /shop/transactions/cancel:
+    post:
+      summary: Membatalkan Transaksi
+      tags: [Shop]
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RequestCancelTransaction'
+      responses:
+        '200':
+          description: Transaksi berhasil dibatalkan dan dana dikembalikan.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+                example:
+                  status: success
+                  code: 200
+                  message: Transaksi berhasil dibatalkan dan dana dikembalikan.
+                  timestamp: "2023-10-27T10:00:00Z"
+        '400':
+          $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          $ref: '#/components/schemas/ErrorResponse'
+  /shop/transactions/confirm-receipt:
+    post:
+      summary: Konfirmasi Penerimaan Produk oleh Pembeli
+      tags: [Shop]
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RequestConfirmTransactionByUser'
+      responses:
+        '200':
+          description: Transaksi berhasil dikonfirmasi.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+                example:
+                  status: success
+                  code: 200
+                  message: Transaksi berhasil dikonfirmasi!
+                  timestamp: "2023-10-27T10:00:00Z"
+        '400':
+          $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          $ref: '#/components/schemas/ErrorResponse'
+  /shop/products/orders:
+    get:
+      summary: Mendapatkan Daftar Pesanan Produk Milik Penjual
+      tags: [Shop]
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: query
+          name: page
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+          description: Nomor halaman.
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            minimum: 1
+            default: 20
+          description: Jumlah item per halaman.
+        - in: query
+          name: status
+          schema:
+            $ref: '#/components/schemas/TransactionStatus'
+          description: Filter berdasarkan status transaksi.
+        - in: query
+          name: buyer_id
+          schema:
+            type: integer
+            format: uint
+          description: Filter berdasarkan ID pembeli.
+        - in: query
+          name: receipt_status
+          schema:
+            $ref: '#/components/schemas/ReceiptStatus'
+          description: Filter berdasarkan status receipt.
+      responses:
+        '200':
+          description: Daftar pesanan berhasil diambil.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetOwnerProductOrdersResponse'
+        '401':
+          $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          $ref: '#/components/schemas/ErrorResponse'
+  /shop/products/orders/confirm-shipment:
+    post:
+      summary: Konfirmasi Pengiriman Produk oleh Penjual
+      tags: [Shop]
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RequestConfirmTransactionByOwner'
+      responses:
+        '200':
+          description: Pengiriman berhasil dikonfirmasi.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+                example:
+                  status: success
+                  code: 200
+                  message: Transaksi berhasil dikonfirmasi!
+                  timestamp: "2023-10-27T10:00:00Z"
+        '400':
+          $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          $ref: '#/components/schemas/ErrorResponse'
+
+  # --- Support Endpoints (User) ---
+  /shop/support/tickets:
+    post:
+      summary: Membuat Tiket Dukungan Baru
+      tags: [Support (User)]
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RequestCreateTicket'
+      responses:
+        '201':
+          description: Tiket dukungan berhasil dibuat.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+                example:
+                  status: success
+                  code: 201
+                  message: Tiket dukungan berhasil dibuat! Kami akan segera menghubungi Anda.
+                  timestamp: "2023-10-27T10:00:00Z"
+        '400':
+          $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          $ref: '#/components/schemas/ErrorResponse'
+    get:
+      summary: Mendapatkan Daftar Tiket Dukungan Pengguna
+      tags: [Support (User)]
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: query
+          name: page
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+          description: Nomor halaman.
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            minimum: 1
+            default: 20
+          description: Jumlah item per halaman.
+        - in: query
+          name: status
+          schema:
+            $ref: '#/components/schemas/SupportTicketStatus'
+          description: Filter berdasarkan status tiket.
+      responses:
+        '200':
+          description: Daftar tiket dukungan berhasil diambil.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetSupportTicketsResponse'
+        '401':
+          $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          $ref: '#/components/schemas/ErrorResponse'
+  /shop/support/tickets/{id}/messages:
+    get:
+      summary: Mendapatkan Pesan Tiket Dukungan Pengguna
+      tags: [Support (User)]
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          schema:
+            type: integer
+            format: uint
+            example: 1
+          required: true
+          description: ID tiket dukungan.
+      responses:
+        '200':
+          description: Pesan tiket dukungan berhasil diambil.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetSupportTicketMessagesResponse'
+        '401':
+          $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          $ref: '#/components/schemas/ErrorResponse'
+  /shop/support/tickets/{id}/reply:
+    post:
+      summary: Membalas Tiket Dukungan Pengguna
+      tags: [Support (User)]
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          schema:
+            type: integer
+            format: uint
+            example: 1
+          required: true
+          description: ID tiket dukungan.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RequestReplyTicket'
+      responses:
+        '200':
+          description: Pesan berhasil dikirim.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+                example:
+                  status: success
+                  code: 200
+                  message: Pesan berhasil dikirim!
+                  timestamp: "2023-10-27T10:00:00Z"
+        '400':
+          $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          $ref: '#/components/schemas/ErrorResponse'
+  /shop/support/tickets/{id}/cancel:
+    patch:
+      summary: Membatalkan Tiket Dukungan Pengguna
+      tags: [Support (User)]
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          schema:
+            type: integer
+            format: uint
+            example: 1
+          required: true
+          description: ID tiket dukungan.
+      responses:
+        '200':
+          description: Tiket dukungan berhasil dibatalkan.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+                example:
+                  status: success
+                  code: 200
+                  message: Tiket dukungan berhasil dibatalkan.
+                  timestamp: "2023-10-27T10:00:00Z"
+        '400':
+          $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          $ref: '#/components/schemas/ErrorResponse'
+
+  # --- Admin Endpoints ---
+  /admin/login:
+    post:
+      summary: Login Admin
+      tags: [Admin]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AdminLoginRequest'
+      responses:
+        '200':
+          description: Login admin berhasil. Token sesi admin dikembalikan di header Authorization.
+          headers:
+            Authorization:
+              schema:
+                type: string
+                example: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+                example:
+                  status: success
+                  code: 200
+                  message: Login admin berhasil! Selamat datang di panel admin.
+                  timestamp: "2023-10-27T10:00:00Z"
+        '401':
+          $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          $ref: '#/components/schemas/ErrorResponse'
+  /admin/dashboard:
+    get:
+      summary: Dashboard Admin
+      tags: [Admin]
+      security:
+        - AdminAuth: []
+      responses:
+        '200':
+          description: Selamat datang di Dashboard Admin.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+                example:
+                  status: success
+                  code: 200
+                  message: Selamat datang di Dashboard Admin!
+                  data: {}
+                  timestamp: "2023-10-27T10:00:00Z"
+        '401':
+          $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          $ref: '#/components/schemas/ErrorResponse'
+  /admin/users:
+    get:
+      summary: Mendapatkan Daftar Pengguna (Admin)
+      tags: [Admin]
+      security:
+        - AdminAuth: []
+      parameters:
+        - in: query
+          name: page
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+          description: Nomor halaman.
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            minimum: 1
+            default: 20
+          description: Jumlah item per halaman.
+        - in: query
+          name: search
+          schema:
+            type: string
+          description: Cari berdasarkan nama lengkap atau email.
+        - in: query
+          name: status
+          schema:
+            $ref: '#/components/schemas/UserStatus'
+          description: Filter berdasarkan status pengguna.
+        - in: query
+          name: role
+          schema:
+            $ref: '#/components/schemas/UserRole'
+            enum: [ "user", "admin" ]
+            default: user
+          description: Filter berdasarkan peran pengguna.
+        - in: query
+          name: include_deleted
+          schema:
+            type: boolean
+            default: false
+          description: Sertakan pengguna yang dihapus secara lunak.
+      responses:
+        '200':
+          description: Daftar pengguna berhasil diambil.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetUsersResponse'
+        '400':
+          $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          $ref: '#/components/schemas/ErrorResponse'
+  /admin/users/{id}/suspend:
+    patch:
+      summary: Menangguhkan Pengguna
+      tags: [Admin]
+      security:
+        - AdminAuth: []
+      parameters:
+        - in: path
+          name: id
+          schema:
+            type: integer
+            format: uint
+            example: 2
+          required: true
+          description: ID pengguna yang akan ditangguhkan.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RequestSuspendUser'
+      responses:
+        '200':
+          description: Pengguna berhasil ditangguhkan.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+                example:
+                  status: success
+                  code: 200
+                  message: Pengguna berhasil ditangguhkan!
+                  timestamp: "2023-10-27T10:00:00Z"
+        '400':
+          $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          $ref: '#/components/schemas/ErrorResponse'
+  /admin/users/{id}/ban:
+    patch:
+      summary: Memblokir Pengguna
+      tags: [Admin]
+      security:
+        - AdminAuth: []
+      parameters:
+        - in: path
+          name: id
+          schema:
+            type: integer
+            format: uint
+            example: 2
+          required: true
+          description: ID pengguna yang akan diblokir.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RequestBanUser'
+      responses:
+        '200':
+          description: Pengguna berhasil diblokir.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+                example:
+                  status: success
+                  code: 200
+                  message: Pengguna berhasil diblokir secara permanen!
+                  timestamp: "2023-10-27T10:00:00Z"
+        '400':
+          $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          $ref: '#/components/schemas/ErrorResponse'
+  /admin/users/{id}/unban:
+    patch:
+      summary: Mengaktifkan Kembali Pengguna (Unban)
+      tags: [Admin]
+      security:
+        - AdminAuth: []
+      parameters:
+        - in: path
+          name: id
+          schema:
+            type: integer
+            format: uint
+            example: 2
+          required: true
+          description: ID pengguna yang akan diaktifkan kembali.
+      responses:
+        '200':
+          description: Pengguna berhasil diaktifkan kembali.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+                example:
+                  status: success
+                  code: 200
+                  message: Pengguna berhasil diaktifkan kembali!
+                  timestamp: "2023-10-27T10:00:00Z"
+        '400':
+          $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          $ref: '#/components/schemas/ErrorResponse'
+  /admin/users/{id}:
+    delete:
+      summary: Menghapus Pengguna (Soft Delete)
+      tags: [Admin]
+      security:
+        - AdminAuth: []
+      parameters:
+        - in: path
+          name: id
+          schema:
+            type: integer
+            format: uint
+            example: 2
+          required: true
+          description: ID pengguna yang akan dihapus.
+      responses:
+        '200':
+          description: Pengguna berhasil dihapus.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+                example:
+                  status: success
+                  code: 200
+                  message: Akun berhasil dihapus!
+                  timestamp: "2023-10-27T10:00:00Z"
+        '401':
+          $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          $ref: '#/components/schemas/ErrorResponse'
+  /admin/products:
+    get:
+      summary: Mendapatkan Daftar Produk (Admin)
+      tags: [Admin]
+      security:
+        - AdminAuth: []
+      parameters:
+        - in: query
+          name: page
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+          description: Nomor halaman.
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            minimum: 1
+            default: 20
+          description: Jumlah item per halaman.
+        - in: query
+          name: search
+          schema:
+            type: string
+          description: Cari berdasarkan judul atau kategori produk.
+        - in: query
+          name: visibility
+          schema:
+            $ref: '#/components/schemas/ProductVisibility'
+          description: Filter berdasarkan visibilitas produk.
+        - in: query
+          name: user_id
+          schema:
+            type: integer
+            format: uint
+          description: Filter berdasarkan ID pemilik produk.
+        - in: query
+          name: include_deleted
+          schema:
+            type: boolean
+            default: false
+          description: Sertakan produk yang dihapus secara lunak.
+      responses:
+        '200':
+          description: Daftar produk berhasil diambil.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetProductsAdminResponse'
+        '400':
+          $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          $ref: '#/components/schemas/ErrorResponse'
+  /admin/products/{id}:
+    patch:
+      summary: Memperbarui Produk (Admin)
+      tags: [Admin]
+      security:
+        - AdminAuth: []
+      parameters:
+        - in: path
+          name: id
+          schema:
+            type: integer
+            format: uint
+            example: 1
+          required: true
+          description: ID produk yang akan diperbarui.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RequestPutProduct'
+      responses:
+        '200':
+          description: Produk berhasil diperbarui.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+                example:
+                  status: success
+                  code: 200
+                  message: Produk berhasil diperbarui!
+                  timestamp: "2023-10-27T10:00:00Z"
+        '400':
+          $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          $ref: '#/components/schemas/ErrorResponse'
+  /admin/transactions:
+    get:
+      summary: Mendapatkan Daftar Transaksi (Admin)
+      tags: [Admin]
+      security:
+        - AdminAuth: []
+      parameters:
+        - in: query
+          name: page
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+          description: Nomor halaman.
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            minimum: 1
+            default: 20
+          description: Jumlah item per halaman.
+        - in: query
+          name: status
+          schema:
+            $ref: '#/components/schemas/TransactionStatus'
+          description: Filter berdasarkan status transaksi.
+        - in: query
+          name: user_id
+          schema:
+            type: integer
+            format: uint
+          description: Filter berdasarkan ID pengguna (pembeli).
+        - in: query
+          name: product_id
+          schema:
+            type: integer
+            format: uint
+          description: Filter berdasarkan ID produk.
+        - in: query
+          name: receipt_status
+          schema:
+            $ref: '#/components/schemas/ReceiptStatus'
+          description: Filter berdasarkan status receipt.
+      responses:
+        '200':
+          description: Daftar transaksi berhasil diambil.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetTransactionsResponse'
+        '400':
+          $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          $ref: '#/components/schemas/ErrorResponse'
+  /admin/transactions/{id}/status:
+    patch:
+      summary: Memperbarui Status Transaksi (Admin)
+      tags: [Admin]
+      security:
+        - AdminAuth: []
+      parameters:
+        - in: path
+          name: id
+          schema:
+            type: integer
+            format: uint
+            example: 1
+          required: true
+          description: ID transaksi yang akan diperbarui statusnya.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RequestPatchTransactionStatus'
+      responses:
+        '200':
+          description: Status transaksi berhasil diperbarui.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+                example:
+                  status: success
+                  code: 200
+                  message: Transaksi berhasil dikonfirmasi!
+                  timestamp: "2023-10-27T10:00:00Z"
+        '400':
+          $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          $ref: '#/components/schemas/ErrorResponse'
+  /admin/balances/history:
+    get:
+      summary: Mendapatkan Riwayat Saldo Semua Pengguna (Admin)
+      tags: [Admin]
+      security:
+        - AdminAuth: []
+      parameters:
+        - in: query
+          name: page
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+          description: Nomor halaman.
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            minimum: 1
+            default: 20
+          description: Jumlah item per halaman.
+        - in: query
+          name: user_id
+          schema:
+            type: integer
+            format: uint
+          description: Filter berdasarkan ID pengguna.
+        - in: query
+          name: status
+          schema:
+            $ref: '#/components/schemas/BalanceStatus'
+          description: Filter berdasarkan status saldo (credit, debit, refund).
+      responses:
+        '200':
+          description: Riwayat saldo berhasil diambil.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetBalanceHistoriesResponse'
+        '400':
+          $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          $ref: '#/components/schemas/ErrorResponse'
+  /admin/balances/topup-withdraw-logs:
+    get:
+      summary: Mendapatkan Log Top Up dan Penarikan (Admin)
+      tags: [Admin]
+      security:
+        - AdminAuth: []
+      parameters:
+        - in: query
+          name: page
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+          description: Nomor halaman.
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            minimum: 1
+            default: 20
+          description: Jumlah item per halaman.
+        - in: query
+          name: user_id
+          schema:
+            type: integer
+            format: uint
+          description: Filter berdasarkan ID pengguna.
+        - in: query
+          name: type
+          schema:
+            type: string
+            enum: [ "topup", "withdraw" ]
+          description: Filter berdasarkan tipe aksi (topup atau withdraw).
+      responses:
+        '200':
+          description: Log top up dan penarikan berhasil diambil.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetTopUpWithdrawLogsResponse'
+        '400':
+          $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          $ref: '#/components/schemas/ErrorResponse'
+  /admin/support/tickets:
+    get:
+      summary: Mendapatkan Daftar Tiket Dukungan (Admin)
+      tags: [Admin]
+      security:
+        - AdminAuth: []
+      parameters:
+        - in: query
+          name: page
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+          description: Nomor halaman.
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            minimum: 1
+            default: 20
+          description: Jumlah item per halaman.
+        - in: query
+          name: status
+          schema:
+            $ref: '#/components/schemas/SupportTicketStatus'
+          description: Filter berdasarkan status tiket.
+        - in: query
+          name: search
+          schema:
+            type: string
+          description: Cari berdasarkan subjek tiket atau email pengguna.
+        - in: query
+          name: user_id
+          schema:
+            type: integer
+            format: uint
+          description: Filter berdasarkan ID pengguna yang membuat tiket.
+        - in: query
+          name: admin_id
+          schema:
+            type: integer
+            format: uint
+          description: Filter berdasarkan ID admin yang ditugaskan.
+        - in: query
+          name: sort_by
+          schema:
+            type: string
+            enum: [ "created_at", "queue_number" ]
+            default: created_at
+          description: Urutkan berdasarkan.
+        - in: query
+          name: sort_order
+          schema:
+            type: string
+            enum: [ "asc", "desc" ]
+            default: desc
+          description: Urutan pengurutan.
+      responses:
+        '200':
+          description: Daftar tiket dukungan berhasil diambil.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetSupportTicketsResponse'
+        '400':
+          $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          $ref: '#/components/schemas/ErrorResponse'
+  /admin/support/tickets/{id}/messages:
+    get:
+      summary: Mendapatkan Pesan Tiket Dukungan (Admin)
+      tags: [Admin]
+      security:
+        - AdminAuth: []
+      parameters:
+        - in: path
+          name: id
+          schema:
+            type: integer
+            format: uint
+            example: 1
+          required: true
+          description: ID tiket dukungan.
+      responses:
+        '200':
+          description: Pesan tiket dukungan berhasil diambil.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetSupportTicketMessagesResponse'
+        '401':
+          $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          $ref: '#/components/schemas/ErrorResponse'
+  /admin/support/tickets/{id}/claim:
+    post:
+      summary: Mengklaim Tiket Dukungan (Admin)
+      tags: [Admin]
+      security:
+        - AdminAuth: []
+      parameters:
+        - in: path
+          name: id
+          schema:
+            type: integer
+            format: uint
+            example: 1
+          required: true
+          description: ID tiket dukungan yang akan diklaim.
+      responses:
+        '200':
+          description: Tiket berhasil diklaim.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+                example:
+                  status: success
+                  code: 200
+                  message: Tiket berhasil diklaim! Anda sekarang dapat membantu pengguna.
+                  timestamp: "2023-10-27T10:00:00Z"
+        '400':
+          $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          $ref: '#/components/schemas/ErrorResponse'
+  /admin/support/tickets/{id}/reply:
+    post:
+      summary: Membalas Tiket Dukungan (Admin)
+      tags: [Admin]
+      security:
+        - AdminAuth: []
+      parameters:
+        - in: path
+          name: id
+          schema:
+            type: integer
+            format: uint
+            example: 1
+          required: true
+          description: ID tiket dukungan.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RequestReplyTicket'
+      responses:
+        '200':
+          description: Pesan berhasil dikirim.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+                example:
+                  status: success
+                  code: 200
+                  message: Pesan berhasil dikirim!
+                  timestamp: "2023-10-27T10:00:00Z"
+        '400':
+          $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          $ref: '#/components/schemas/ErrorResponse'
+
+  # --- Upload Endpoints ---
+  /upload/image:
+    post:
+      summary: Mengunggah Gambar
+      tags: [Upload]
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: query
+          name: type
+          schema:
+            type: string
+            enum: [ "general", "chat", "support", "product" ]
+            default: general
+          description: Tipe upload untuk menentukan direktori penyimpanan.
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                image:
+                  type: string
+                  format: binary
+                  description: File gambar yang akan diunggah.
+      responses:
+        '200':
+          description: File berhasil diunggah.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UploadFileResponse'
+        '400':
+          $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          $ref: '#/components/schemas/ErrorResponse'
+  /upload/file:
+    post:
+      summary: Mengunggah File Umum
+      tags: [Upload]
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: query
+          name: type
+          schema:
+            type: string
+            enum: [ "general", "chat", "support", "product" ]
+            default: general
+          description: Tipe upload untuk menentukan direktori penyimpanan.
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file:
+                  type: string
+                  format: binary
+                  description: File umum yang akan diunggah (PDF, DOCX, TXT, dll.).
+      responses:
+        '200':
+          description: File berhasil diunggah.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UploadFileResponse'
+        '400':
+          $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          $ref: '#/components/schemas/ErrorResponse'
+
+  # --- WebSocket Endpoints ---
+  /ws/chat/{transaction_id}:
+    get:
+      summary: WebSocket Chat untuk Transaksi
+      tags: [WebSocket]
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: transaction_id
+          schema:
+            type: integer
+            format: uint
+            example: 1
+          required: true
+          description: ID transaksi untuk chat.
+      description: |
+        Membangun koneksi WebSocket untuk chat real-time terkait transaksi tertentu.
+        Hanya pembeli atau penjual yang terlibat dalam transaksi yang dapat terhubung.
+        Chat tidak diizinkan untuk transaksi yang sudah `success` atau `cancel`.
+
+        **Pesan yang Dikirim ke Server (RequestSendMessage):**
+        ```json
+        {
+          "transaction_id": 1,
+          "message_type": "text",
+          "content": "Halo, apakah produk ini masih tersedia?"
+        }
+        ```
+        Atau untuk gambar/file:
+        ```json
+        {
+          "transaction_id": 1,
+          "message_type": "image",
+          "file_url": "http://localhost:8080/media/chat/randomimage.jpg"
+        }
+        ```
+
+        **Pesan yang Diterima dari Server (ChatMessageWebSocketResponse atau SuccessMessageWebSocketResponse):**
+        *   **Untuk Penerima (pihak lain dalam transaksi):**
+            ```json
+            {
+              "type": "chat_message",
+              "message": {
+                "id": 1,
+                "transaction_id": 1,
+                "sender_id": 2,
+                "sender_name": "John Doe",
+                "message_type": "text",
+                "content": "Halo, apakah produk ini masih tersedia?",
+                "file_url": null,
+                "created_at": "2023-10-27T10:00:00Z"
+              }
+            }
+            ```
+        *   **Untuk Pengirim (konfirmasi sukses):**
+            ```json
+            {
+              "status": "success",
+              "message": "Pesan berhasil dikirim dan disimpan.",
+              "chat_message": {
+                "id": 1,
+                "transaction_id": 1,
+                "sender_id": 2,
+                "sender_name": "",
+                "message_type": "text",
+                "content": "Halo, apakah produk ini masih tersedia?",
+                "file_url": null,
+                "created_at": "2023-10-27T10:00:00Z"
+              }
+            }
+            ```
+      responses:
+        '101':
+          description: Switching Protocols (WebSocket Upgrade)
+        '400':
+          $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          $ref: '#/components/schemas/ErrorResponse'
+  /ws/notifications:
+    get:
+      summary: WebSocket Notifikasi
+      tags: [WebSocket]
+      security:
+        - BearerAuth: []
+      description: |
+        Membangun koneksi WebSocket untuk menerima notifikasi real-time.
+        Setelah terhubung, server akan mengirimkan semua notifikasi yang belum dibaca, lalu menandainya sebagai sudah dibaca.
+        Notifikasi baru akan dikirim secara real-time saat terjadi.
+
+        **Pesan yang Diterima dari Server (NotificationWebSocketResponse):**
+        ```json
+        {
+          "type": "notification",
+          "message": {
+            "id": 1,
+            "user_id": 2,
+            "type": "purchase",
+            "message": "Pembelian 'Indomie Goreng' Anda berhasil! Menunggu konfirmasi pengiriman dari penjual.",
+            "related_id": 101,
+            "created_at": "2023-10-27T10:00:00Z",
+            "is_read": false
+          }
+        }
+        ```
+      responses:
+        '101':
+          description: Switching Protocols (WebSocket Upgrade)
+        '401':
+          $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          $ref: '#/components/schemas/ErrorResponse'

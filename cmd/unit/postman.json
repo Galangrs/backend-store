@@ -1,0 +1,1574 @@
+{
+    "info": {
+        "_postman_id": "YOUR_POSTMAN_COLLECTION_ID",
+        "name": "Portolio Backend API",
+        "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+        "_collection_link": "https://www.postman.com/collections/YOUR_COLLECTION_LINK"
+    },
+    "variables": [
+        {
+            "key": "baseUrl",
+            "value": "http://localhost:8080/api",
+            "type": "string"
+        },
+        {
+            "key": "userToken",
+            "value": "",
+            "type": "string"
+        },
+        {
+            "key": "adminToken",
+            "value": "",
+            "type": "string"
+        },
+        {
+            "key": "userId",
+            "value": "",
+            "type": "string"
+        },
+        {
+            "key": "adminId",
+            "value": "",
+            "type": "string"
+        },
+        {
+            "key": "productId",
+            "value": "",
+            "type": "string"
+        },
+        {
+            "key": "transactionId",
+            "value": "",
+            "type": "string"
+        },
+        {
+            "key": "supportTicketId",
+            "value": "",
+            "type": "string"
+        }
+    ],
+    "item": [
+        {
+            "name": "Account",
+            "item": [
+                {
+                    "name": "Register User",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"full_name\": \"Test User\",\n    \"email\": \"testuser@example.com\",\n    \"password\": \"TestUser123!\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/account/register",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "account",
+                                "register"
+                            ]
+                        },
+                        "description": "Registrasi pengguna baru."
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Login User",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "var jsonData = pm.response.json();",
+                                    "pm.test(\"Status code is 200 OK\", function () {",
+                                    "    pm.response.to.have.status(200);",
+                                    "});",
+                                    "pm.test(\"Login successful message\", function () {",
+                                    "    pm.expect(jsonData.message).to.eql(\"Login berhasil! Selamat datang kembali.\");",
+                                    "});",
+                                    "",
+                                    "var authHeader = pm.response.headers.get('Authorization');",
+                                    "if (authHeader) {",
+                                    "    var token = authHeader.replace('Bearer ', '');",
+                                    "    pm.collectionVariables.set(\"userToken\", token);",
+                                    "    console.log(\"User Token: \" + token);",
+                                    "} else {",
+                                    "    console.log(\"Authorization header not found.\");",
+                                    "}"
+                                ],
+                                "type": "text/javascript"
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"email\": \"user@user.com\",\n    \"password\": \"@users123\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/account/login",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "account",
+                                "login"
+                            ]
+                        },
+                        "description": "Login pengguna untuk mendapatkan token JWT."
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Get User Balance and History",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{userToken}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{baseUrl}}/account/balance?limit=10",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "account",
+                                "balance"
+                            ],
+                            "query": [
+                                {
+                                    "key": "limit",
+                                    "value": "10",
+                                    "description": "Jumlah riwayat saldo yang akan diambil."
+                                }
+                            ]
+                        },
+                        "description": "Mendapatkan saldo dan riwayat saldo pengguna."
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Top Up Balance",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{userToken}}"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"amount\": 100000\n}"
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/account/topup",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "account",
+                                "topup"
+                            ]
+                        },
+                        "description": "Melakukan top up saldo pengguna."
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Withdraw Balance",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{userToken}}"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"amount\": 50000\n}"
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/account/withdraw",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "account",
+                                "withdraw"
+                            ]
+                        },
+                        "description": "Melakukan penarikan saldo pengguna."
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Update Account Info",
+                    "request": {
+                        "method": "PATCH",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{userToken}}"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"full_name\": \"Updated User Name\",\n    \"email\": \"updated.user@example.com\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/account",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "account"
+                            ]
+                        },
+                        "description": "Memperbarui informasi akun pengguna (nama, email, atau password)."
+                    },
+                    "response": []
+                }
+            ]
+        },
+        {
+            "name": "Shop",
+            "item": [
+                {
+                    "name": "Get Products (Public)",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{baseUrl}}/shop/products?page=1&limit=10",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "shop",
+                                "products"
+                            ],
+                            "query": [
+                                {
+                                    "key": "page",
+                                    "value": "1"
+                                },
+                                {
+                                    "key": "limit",
+                                    "value": "10"
+                                }
+                            ]
+                        },
+                        "description": "Mengambil daftar produk yang terlihat publik. Dapat diakses oleh tamu, pengguna, dan admin."
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Create Product",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "var jsonData = pm.response.json();",
+                                    "if (jsonData && jsonData.data && jsonData.data.id) {",
+                                    "    pm.collectionVariables.set(\"productId\", jsonData.data.id);",
+                                    "    console.log(\"Created Product ID: \" + jsonData.data.id);",
+                                    "}"
+                                ],
+                                "type": "text/javascript"
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{userToken}}"
+                            },
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"title\": \"Smartwatch Pro X\",\n    \"price\": 1500000,\n    \"stock\": 20,\n    \"visibility\": \"all\",\n    \"categories\": \"Electronics,Wearables\",\n    \"images_links\": [\n        \"https://dummyimage.com/600x400/000/fff&text=Smartwatch\"\n    ]\n}"
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/shop/products",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "shop",
+                                "products"
+                            ]
+                        },
+                        "description": "Membuat produk baru. Dapat menggunakan JSON body dengan `images_links` atau `multipart/form-data` dengan `images` (file)."
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Update Product",
+                    "request": {
+                        "method": "PUT",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{userToken}}"
+                            },
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"title\": \"Smartwatch Pro X (Updated)\",\n    \"price\": 1450000,\n    \"stock\": 18,\n    \"categories\": \"Electronics,Wearables,Gadgets\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/shop/products/{{productId}}",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "shop",
+                                "products",
+                                "{{productId}}"
+                            ]
+                        },
+                        "description": "Memperbarui produk yang ada. Dapat menggunakan JSON body dengan `images_links` atau `multipart/form-data` dengan `images` (file)."
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Delete Product",
+                    "request": {
+                        "method": "DELETE",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{userToken}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{baseUrl}}/shop/products/{{productId}}",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "shop",
+                                "products",
+                                "{{productId}}"
+                            ]
+                        },
+                        "description": "Menghapus produk (soft delete). Semua transaksi tertunda terkait akan ditangani."
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Patch Product Visibility",
+                    "request": {
+                        "method": "PATCH",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{userToken}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{baseUrl}}/shop/products/{{productId}}/visibility",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "shop",
+                                "products",
+                                "{{productId}}",
+                                "visibility"
+                            ]
+                        },
+                        "description": "Mengubah visibilitas produk antara 'all' (terlihat publik) dan 'owner_admin' (hanya terlihat oleh pemilik dan admin)."
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Get Buyer Orders (Cart)",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{userToken}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{baseUrl}}/shop/orders?page=1",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "shop",
+                                "orders"
+                            ],
+                            "query": [
+                                {
+                                    "key": "page",
+                                    "value": "1"
+                                }
+                            ]
+                        },
+                        "description": "Mendapatkan riwayat pesanan pembeli (termasuk yang masih dalam proses)."
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Purchase Product",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "var jsonData = pm.response.json();",
+                                    "if (jsonData && jsonData.data && jsonData.data.id) {",
+                                    "    pm.collectionVariables.set(\"transactionId\", jsonData.data.id);",
+                                    "    console.log(\"Created Transaction ID: \" + jsonData.data.id);",
+                                    "}"
+                                ],
+                                "type": "text/javascript"
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{userToken}}"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "[\n    {\n        \"product_id\": 1,\n        \"quantity\": 1\n    }\n]"
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/shop/purchase",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "shop",
+                                "purchase"
+                            ]
+                        },
+                        "description": "Melakukan pembelian satu atau lebih produk."
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Confirm Receipt by Buyer",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{userToken}}"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"transaction_ids\": [{{transactionId}}],\n    \"reviews\": [\n        {\n            \"transaction_id\": {{transactionId}},\n            \"rating\": 5,\n            \"comment\": \"Produk sesuai deskripsi dan pengiriman cepat!\"\n        }\n    ]\n}"
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/shop/transactions/confirm-receipt",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "shop",
+                                "transactions",
+                                "confirm-receipt"
+                            ]
+                        },
+                        "description": "Pembeli mengkonfirmasi penerimaan produk. Opsional dapat menyertakan ulasan."
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Cancel Transaction",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{userToken}}"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"transaction_ids\": [{{transactionId}}]\n}"
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/shop/transactions/cancel",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "shop",
+                                "transactions",
+                                "cancel"
+                            ]
+                        },
+                        "description": "Membatalkan transaksi. Hanya bisa dilakukan jika status 'pending' atau 'waiting_owner'."
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Get Owner Product Orders",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{userToken}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{baseUrl}}/shop/products/orders?page=1&limit=20&status=pending",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "shop",
+                                "products",
+                                "orders"
+                            ],
+                            "query": [
+                                {
+                                    "key": "page",
+                                    "value": "1"
+                                },
+                                {
+                                    "key": "limit",
+                                    "value": "20"
+                                },
+                                {
+                                    "key": "status",
+                                    "value": "pending",
+                                    "description": "Filter berdasarkan status transaksi."
+                                }
+                            ]
+                        },
+                        "description": "Mendapatkan daftar pesanan produk yang dimiliki oleh pengguna yang sedang login (sebagai penjual)."
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Confirm Shipment by Owner",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{userToken}}"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"transaction_ids\": [{{transactionId}}]\n}"
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/shop/products/orders/confirm-shipment",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "shop",
+                                "products",
+                                "orders",
+                                "confirm-shipment"
+                            ]
+                        },
+                        "description": "Penjual mengkonfirmasi pengiriman produk."
+                    },
+                    "response": []
+                }
+            ]
+        },
+        {
+            "name": "Support (User)",
+            "item": [
+                {
+                    "name": "Create Support Ticket",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "var jsonData = pm.response.json();",
+                                    "if (jsonData && jsonData.data && jsonData.data.id) {",
+                                    "    pm.collectionVariables.set(\"supportTicketId\", jsonData.data.id);",
+                                    "    console.log(\"Created Support Ticket ID: \" + jsonData.data.id);",
+                                    "}"
+                                ],
+                                "type": "text/javascript"
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{userToken}}"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"subject\": \"Masalah dengan pengiriman produk\",\n    \"message\": \"Produk yang saya pesan dengan ID 123 belum juga sampai setelah 5 hari kerja. Mohon bantuannya.\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/shop/support/tickets",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "shop",
+                                "support",
+                                "tickets"
+                            ]
+                        },
+                        "description": "Membuat tiket dukungan baru."
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Get User Support Tickets",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{userToken}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{baseUrl}}/shop/support/tickets?status=open",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "shop",
+                                "support",
+                                "tickets"
+                            ],
+                            "query": [
+                                {
+                                    "key": "status",
+                                    "value": "open",
+                                    "description": "Filter berdasarkan status tiket."
+                                }
+                            ]
+                        },
+                        "description": "Mendapatkan daftar tiket dukungan yang dibuat oleh pengguna yang sedang login."
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Get User Support Ticket Messages",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{userToken}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{baseUrl}}/shop/support/tickets/{{supportTicketId}}/messages",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "shop",
+                                "support",
+                                "tickets",
+                                "{{supportTicketId}}",
+                                "messages"
+                            ]
+                        },
+                        "description": "Mendapatkan pesan-pesan dalam tiket dukungan tertentu yang dibuat oleh pengguna."
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Reply Support Ticket (User)",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{userToken}}"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"content\": \"Terima kasih atas responsnya, saya menunggu kabar selanjutnya.\",\n    \"message_type\": \"text\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/shop/support/tickets/{{supportTicketId}}/reply",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "shop",
+                                "support",
+                                "tickets",
+                                "{{supportTicketId}}",
+                                "reply"
+                            ]
+                        },
+                        "description": "Membalas tiket dukungan sebagai pengguna."
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Cancel Support Ticket (User)",
+                    "request": {
+                        "method": "PATCH",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{userToken}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{baseUrl}}/shop/support/tickets/{{supportTicketId}}/cancel",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "shop",
+                                "support",
+                                "tickets",
+                                "{{supportTicketId}}",
+                                "cancel"
+                            ]
+                        },
+                        "description": "Membatalkan tiket dukungan sebagai pengguna."
+                    },
+                    "response": []
+                }
+            ]
+        },
+        {
+            "name": "Admin",
+            "item": [
+                {
+                    "name": "Admin Login",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "var jsonData = pm.response.json();",
+                                    "pm.test(\"Status code is 200 OK\", function () {",
+                                    "    pm.response.to.have.status(200);",
+                                    "});",
+                                    "pm.test(\"Login successful message\", function () {",
+                                    "    pm.expect(jsonData.message).to.eql(\"Login admin berhasil! Selamat datang di panel admin.\");",
+                                    "});",
+                                    "",
+                                    "var authHeader = pm.response.headers.get('Authorization');",
+                                    "if (authHeader) {",
+                                    "    var token = authHeader.replace('Bearer ', '');",
+                                    "    pm.collectionVariables.set(\"adminToken\", token);",
+                                    "    console.log(\"Admin Token: \" + token);",
+                                    "} else {",
+                                    "    console.log(\"Authorization header not found.\");",
+                                    "}"
+                                ],
+                                "type": "text/javascript"
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"email\": \"admin@admin.com\",\n    \"password\": \"@admin123\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/admin/login",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "admin",
+                                "login"
+                            ]
+                        },
+                        "description": "Login admin untuk mendapatkan token sesi admin."
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Admin Dashboard",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{adminToken}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{baseUrl}}/admin/dashboard",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "admin",
+                                "dashboard"
+                            ]
+                        },
+                        "description": "Endpoint sederhana untuk menguji akses admin."
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Get Users (Admin)",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{adminToken}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{baseUrl}}/admin/users?page=1&limit=10&status=active&role=user",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "admin",
+                                "users"
+                            ],
+                            "query": [
+                                {
+                                    "key": "page",
+                                    "value": "1"
+                                },
+                                {
+                                    "key": "limit",
+                                    "value": "10"
+                                },
+                                {
+                                    "key": "status",
+                                    "value": "active",
+                                    "description": "Filter berdasarkan status pengguna."
+                                },
+                                {
+                                    "key": "role",
+                                    "value": "user",
+                                    "description": "Filter berdasarkan peran pengguna."
+                                }
+                            ]
+                        },
+                        "description": "Mendapatkan daftar pengguna (termasuk admin) dengan opsi filter."
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Suspend User",
+                    "request": {
+                        "method": "PATCH",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{adminToken}}"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"reason\": \"Melanggar kebijakan penggunaan berulang kali.\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/admin/users/{{userId}}/suspend",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "admin",
+                                "users",
+                                "{{userId}}",
+                                "suspend"
+                            ]
+                        },
+                        "description": "Menangguhkan pengguna. Semua produk pengguna akan disembunyikan."
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Ban User",
+                    "request": {
+                        "method": "PATCH",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{adminToken}}"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"duration_hours\": 24,\n    \"reason\": \"Melakukan penipuan dan penyalahgunaan sistem.\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/admin/users/{{userId}}/ban",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "admin",
+                                "users",
+                                "{{userId}}",
+                                "ban"
+                            ]
+                        },
+                        "description": "Memblokir pengguna untuk durasi tertentu. Semua produk pengguna akan disembunyikan."
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Unban User",
+                    "request": {
+                        "method": "PATCH",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{adminToken}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{baseUrl}}/admin/users/{{userId}}/unban",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "admin",
+                                "users",
+                                "{{userId}}",
+                                "unban"
+                            ]
+                        },
+                        "description": "Mengaktifkan kembali pengguna yang ditangguhkan atau diblokir."
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Delete User (Admin)",
+                    "request": {
+                        "method": "DELETE",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{adminToken}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{baseUrl}}/admin/users/{{userId}}",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "admin",
+                                "users",
+                                "{{userId}}"
+                            ]
+                        },
+                        "description": "Menghapus pengguna secara lunak (soft delete). Semua produk pengguna akan disembunyikan."
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Get Products (Admin)",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{adminToken}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{baseUrl}}/admin/products?page=1&limit=10&visibility=all",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "admin",
+                                "products"
+                            ],
+                            "query": [
+                                {
+                                    "key": "page",
+                                    "value": "1"
+                                },
+                                {
+                                    "key": "limit",
+                                    "value": "10"
+                                },
+                                {
+                                    "key": "visibility",
+                                    "value": "all",
+                                    "description": "Filter berdasarkan visibilitas produk."
+                                }
+                            ]
+                        },
+                        "description": "Mendapatkan daftar produk dari sudut pandang admin, dengan opsi filter."
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Patch Product (Admin)",
+                    "request": {
+                        "method": "PATCH",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{adminToken}}"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"price\": 1600000,\n    \"is_active\": true\n}"
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/admin/products/{{productId}}",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "admin",
+                                "products",
+                                "{{productId}}"
+                            ]
+                        },
+                        "description": "Memperbarui produk sebagai admin. Admin dapat mengubah semua bidang termasuk `is_active` dan `visibility` ke `admin_only`."
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Get Transactions (Admin)",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{adminToken}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{baseUrl}}/admin/transactions?page=1&limit=10&status=pending",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "admin",
+                                "transactions"
+                            ],
+                            "query": [
+                                {
+                                    "key": "page",
+                                    "value": "1"
+                                },
+                                {
+                                    "key": "limit",
+                                    "value": "10"
+                                },
+                                {
+                                    "key": "status",
+                                    "value": "pending",
+                                    "description": "Filter berdasarkan status transaksi."
+                                }
+                            ]
+                        },
+                        "description": "Mendapatkan daftar transaksi dari sudut pandang admin, dengan opsi filter."
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Patch Transaction Status (Admin)",
+                    "request": {
+                        "method": "PATCH",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{adminToken}}"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"status\": \"success\",\n    \"reason\": \"Konfirmasi manual oleh admin karena masalah teknis.\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/admin/transactions/{{transactionId}}/status",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "admin",
+                                "transactions",
+                                "{{transactionId}}",
+                                "status"
+                            ]
+                        },
+                        "description": "Memperbarui status transaksi sebagai admin. Admin dapat memaksa status menjadi 'success' atau 'cancel'."
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Get Balance Histories (Admin)",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{adminToken}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{baseUrl}}/admin/balances/history?page=1&limit=10&status=credit",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "admin",
+                                "balances",
+                                "history"
+                            ],
+                            "query": [
+                                {
+                                    "key": "page",
+                                    "value": "1"
+                                },
+                                {
+                                    "key": "limit",
+                                    "value": "10"
+                                },
+                                {
+                                    "key": "status",
+                                    "value": "credit",
+                                    "description": "Filter berdasarkan status saldo (credit, debit, refund)."
+                                }
+                            ]
+                        },
+                        "description": "Mendapatkan riwayat saldo semua pengguna dari sudut pandang admin."
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Get Top Up/Withdraw Logs (Admin)",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{adminToken}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{baseUrl}}/admin/balances/topup-withdraw-logs?page=1&limit=10&type=topup",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "admin",
+                                "balances",
+                                "topup-withdraw-logs"
+                            ],
+                            "query": [
+                                {
+                                    "key": "page",
+                                    "value": "1"
+                                },
+                                {
+                                    "key": "limit",
+                                    "value": "10"
+                                },
+                                {
+                                    "key": "type",
+                                    "value": "topup",
+                                    "description": "Filter berdasarkan tipe aksi (topup atau withdraw)."
+                                }
+                            ]
+                        },
+                        "description": "Mendapatkan log top up dan penarikan dari sudut pandang admin."
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Get Support Tickets (Admin)",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{adminToken}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{baseUrl}}/admin/support/tickets?status=open&sort_by=queue_number&sort_order=asc",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "admin",
+                                "support",
+                                "tickets"
+                            ],
+                            "query": [
+                                {
+                                    "key": "status",
+                                    "value": "open",
+                                    "description": "Filter berdasarkan status tiket."
+                                },
+                                {
+                                    "key": "sort_by",
+                                    "value": "queue_number",
+                                    "description": "Urutkan berdasarkan."
+                                },
+                                {
+                                    "key": "sort_order",
+                                    "value": "asc",
+                                    "description": "Urutan pengurutan."
+                                }
+                            ]
+                        },
+                        "description": "Mendapatkan daftar tiket dukungan dari sudut pandang admin, dengan opsi filter dan pengurutan."
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Get Support Ticket Messages (Admin)",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{adminToken}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{baseUrl}}/admin/support/tickets/{{supportTicketId}}/messages",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "admin",
+                                "support",
+                                "tickets",
+                                "{{supportTicketId}}",
+                                "messages"
+                            ]
+                        },
+                        "description": "Mendapatkan pesan-pesan dalam tiket dukungan tertentu sebagai admin."
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Claim Support Ticket (Admin)",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{adminToken}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{baseUrl}}/admin/support/tickets/{{supportTicketId}}/claim",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "admin",
+                                "support",
+                                "tickets",
+                                "{{supportTicketId}}",
+                                "claim"
+                            ]
+                        },
+                        "description": "Admin mengklaim tiket dukungan untuk ditangani."
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Reply Support Ticket (Admin)",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{adminToken}}"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"content\": \"Halo, kami sedang memproses tiket Anda. Mohon bersabar.\",\n    \"message_type\": \"text\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/admin/support/tickets/{{supportTicketId}}/reply",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "admin",
+                                "support",
+                                "tickets",
+                                "{{supportTicketId}}",
+                                "reply"
+                            ]
+                        },
+                        "description": "Membalas tiket dukungan sebagai admin."
+                    },
+                    "response": []
+                }
+            ]
+        },
+        {
+            "name": "Upload",
+            "item": [
+                {
+                    "name": "Upload Image",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{userToken}}"
+                            }
+                        ],
+                        "body": {
+                            "mode": "formdata",
+                            "formdata": [
+                                {
+                                    "key": "image",
+                                    "type": "file",
+                                    "src": "/path/to/your/image.jpg"
+                                }
+                            ]
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/upload/image?type=general",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "upload",
+                                "image"
+                            ],
+                            "query": [
+                                {
+                                    "key": "type",
+                                    "value": "general",
+                                    "description": "Tipe upload untuk menentukan direktori penyimpanan (general, chat, support, product)."
+                                }
+                            ]
+                        },
+                        "description": "Mengunggah file gambar. Ganti `/path/to/your/image.jpg` dengan path file lokal Anda."
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Upload File",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{userToken}}"
+                            }
+                        ],
+                        "body": {
+                            "mode": "formdata",
+                            "formdata": [
+                                {
+                                    "key": "file",
+                                    "type": "file",
+                                    "src": "/path/to/your/document.pdf"
+                                }
+                            ]
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/upload/file?type=general",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "upload",
+                                "file"
+                            ],
+                            "query": [
+                                {
+                                    "key": "type",
+                                    "value": "general",
+                                    "description": "Tipe upload untuk menentukan direktori penyimpanan (general, chat, support, product)."
+                                }
+                            ]
+                        },
+                        "description": "Mengunggah file umum (PDF, DOCX, TXT, dll.). Ganti `/path/to/your/document.pdf` dengan path file lokal Anda."
+                    },
+                    "response": []
+                }
+            ]
+        },
+        {
+            "name": "WebSocket",
+            "item": [
+                {
+                    "name": "Connect Chat WebSocket",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{userToken}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "ws://localhost:8080/ws/chat/{{transactionId}}",
+                            "protocol": "ws",
+                            "host": [
+                                "localhost"
+                            ],
+                            "port": "8080",
+                            "path": [
+                                "ws",
+                                "chat",
+                                "{{transactionId}}"
+                            ]
+                        },
+                        "description": "Membangun koneksi WebSocket untuk chat real-time terkait transaksi tertentu. Gunakan `ws://` atau `wss://`."
+                    },
+                    "protocolProfileBehavior": {
+                        "disableBodyPruning": true
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Connect Notification WebSocket",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{userToken}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "ws://localhost:8080/ws/notifications",
+                            "protocol": "ws",
+                            "host": [
+                                "localhost"
+                            ],
+                            "port": "8080",
+                            "path": [
+                                "ws",
+                                "notifications"
+                            ]
+                        },
+                        "description": "Membangun koneksi WebSocket untuk menerima notifikasi real-time. Gunakan `ws://` atau `wss://`."
+                    },
+                    "protocolProfileBehavior": {
+                        "disableBodyPruning": true
+                    },
+                    "response": []
+                }
+            ]
+        }
+    ]
+}

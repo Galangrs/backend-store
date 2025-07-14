@@ -1,0 +1,1076 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Portofolio Backend API Tester</title>
+    <!-- jQuery CDN -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <!-- Bootstrap CDN (for basic styling and layout) -->
+    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.bundle.min.js"></script>
+    <!-- SweetAlert2 CDN (for better alerts) -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <style>
+        body {
+            padding-top: 20px;
+        }
+
+        .container {
+            max-width: 90%;
+        }
+
+        .card {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            font-weight: bold;
+        }
+
+        .section-title {
+            margin-top: 30px;
+            margin-bottom: 20px;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 10px;
+        }
+
+        .response-box {
+            background: #f8f9fa;
+            border: 1px solid #e9ecef;
+            padding: 15px;
+            min-height: 100px;
+            max-height: 400px;
+            overflow-y: auto;
+            font-family: monospace;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+
+        .websocket-log {
+            height: 300px;
+            overflow-y: scroll;
+            background: #f0f0f0;
+            padding: 10px;
+            border-radius: 5px;
+        }
+
+        .message-incoming {
+            color: blue;
+        }
+
+        .message-outgoing {
+            color: green;
+        }
+
+        .message-system {
+            color: gray;
+            font-style: italic;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h1 class="text-center mb-4">Portofolio Backend API Tester</h1>
+
+        <!-- API Base URL Configuration -->
+        <div class="card">
+            <div class="card-header bg-primary text-white">API Configuration</div>
+            <div class="card-body">
+                <div class="form-group row">
+                    <label for="apiBaseUrl" class="col-sm-2 col-form-label">API Base URL</label>
+                    <div class="col-sm-10">
+                        <input type="text" class="form-control" id="apiBaseUrl" value="http://localhost:8080/api">
+                        <small class="form-text text-muted">Example: http://localhost:8080/api</small>
+                    </div>
+                </div>
+                <div class="form-group row">
+                    <label for="wsBaseUrl" class="col-sm-2 col-form-label">WebSocket Base URL</label>
+                    <div class="col-sm-10">
+                        <input type="text" class="form-control" id="wsBaseUrl" value="ws://localhost:8080/ws">
+                        <small class="form-text text-muted">Example: ws://localhost:8080/ws</small>
+                    </div>
+                </div>
+                <div class="form-group row">
+                    <label for="jwtToken" class="col-sm-2 col-form-label">JWT Token</label>
+                    <div class="col-sm-10">
+                        <textarea class="form-control" id="jwtToken" rows="3"
+                            placeholder="Enter JWT token here"></textarea>
+                        <small class="form-text text-muted">This token will be used for all authenticated
+                            requests.</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Shared AJAX Response Box -->
+        <h3 class="section-title">API Response</h3>
+        <div class="response-box" id="apiResponse">
+            Awaiting API response...
+        </div>
+
+        <!-- Account Endpoints -->
+        <h3 class="section-title">Account Endpoints</h3>
+        <div class="card">
+            <div class="card-header">Register</div>
+            <div class="card-body">
+                <div class="form-group">
+                    <input type="text" class="form-control" id="registerFullName" placeholder="Full Name"
+                        value="Test User">
+                </div>
+                <div class="form-group">
+                    <input type="email" class="form-control" id="registerEmail" placeholder="Email"
+                        value="testuser@example.com">
+                </div>
+                <div class="form-group">
+                    <input type="password" class="form-control" id="registerPassword" placeholder="Password (@users123)"
+                        value="@users123">
+                </div>
+                <button class="btn btn-primary" id="btnRegister">Register</button>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">Login User</div>
+            <div class="card-body">
+                <div class="form-group">
+                    <input type="email" class="form-control" id="loginEmail" placeholder="Email" value="budi@user.com">
+                </div>
+                <div class="form-group">
+                    <input type="password" class="form-control" id="loginPassword" placeholder="Password (@users123)"
+                        value="@users123">
+                </div>
+                <button class="btn btn-success" id="btnLoginUser">Login User</button>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">Login Admin</div>
+            <div class="card-body">
+                <div class="form-group">
+                    <input type="email" class="form-control" id="loginAdminEmail" placeholder="Admin Email"
+                        value="admin@admin.com">
+                </div>
+                <div class="form-group">
+                    <input type="password" class="form-control" id="loginAdminPassword"
+                        placeholder="Admin Password (@admin123)" value="@admin123">
+                </div>
+                <button class="btn btn-warning" id="btnLoginAdmin">Login Admin</button>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">User Profile & Balance</div>
+            <div class="card-body">
+                <div class="form-group">
+                    <input type="number" class="form-control" id="topupAmount" placeholder="Top-up Amount"
+                        value="50000">
+                </div>
+                <button class="btn btn-info" id="btnTopup">Top-up Balance</button>
+                <div class="form-group mt-3">
+                    <input type="number" class="form-control" id="withdrawAmount" placeholder="Withdraw Amount"
+                        value="10000">
+                </div>
+                <button class="btn btn-info" id="btnWithdraw">Withdraw Balance</button>
+                <button class="btn btn-info mt-3" id="btnGetBalance">Get Balance & History</button>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">Update Account</div>
+            <div class="card-body">
+                <div class="form-group">
+                    <input type="text" class="form-control" id="patchFullName" placeholder="New Full Name">
+                </div>
+                <div class="form-group">
+                    <input type="email" class="form-control" id="patchEmail" placeholder="New Email">
+                </div>
+                <div class="form-group">
+                    <input type="password" class="form-control" id="patchOldPassword" placeholder="Old Password">
+                </div>
+                <div class="form-group">
+                    <input type="password" class="form-control" id="patchNewPassword" placeholder="New Password">
+                </div>
+                <button class="btn btn-info" id="btnPatchAccount">Update Account</button>
+            </div>
+        </div>
+
+        <!-- Shop Endpoints -->
+        <h3 class="section-title">Shop Endpoints</h3>
+        <div class="card">
+            <div class="card-header">Products</div>
+            <div class="card-body">
+                <button class="btn btn-info" id="btnGetProducts">Get All Products</button>
+                <div class="form-group mt-3">
+                    <textarea class="form-control" id="postProductData" rows="5"
+                        placeholder='{"title": "New Product", "price": 100000, "stock": 5, "categories": "category1,category2"}'></textarea>
+                </div>
+                <button class="btn btn-success" id="btnPostProduct">Create Product</button>
+
+                <div class="form-group mt-3">
+                    <label for="putProductId">Product ID for PUT/DELETE/PATCH</label>
+                    <input type="number" class="form-control" id="putProductId" placeholder="Product ID">
+                </div>
+                <div class="form-group">
+                    <textarea class="form-control" id="putProductData" rows="5"
+                        placeholder='{"title": "Updated Product Title", "price": 120000, "stock": 3}'></textarea>
+                </div>
+                <button class="btn btn-warning" id="btnPutProduct">Update Product</button>
+                <button class="btn btn-danger" id="btnDeleteProduct">Delete Product</button>
+                <div class="form-group mt-3">
+                    <label for="patchProductVisibilityId">Product ID for Visibility</label>
+                    <input type="number" class="form-control" id="patchProductVisibilityId" placeholder="Product ID">
+                </div>
+                <button class="btn btn-primary" id="btnToggleProductVisibility">Toggle Product Visibility</button>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">Purchases / Transactions</div>
+            <div class="card-body">
+                <div class="form-group">
+                    <textarea class="form-control" id="purchaseData" rows="5"
+                        placeholder='[{"product_id": 1, "quantity": 1}]'></textarea>
+                </div>
+                <button class="btn btn-success" id="btnPurchase">Purchase Product(s)</button>
+                <button class="btn btn-info mt-3" id="btnGetCart">Get My Cart / Transactions</button>
+                <button class="btn btn-info mt-3" id="btnGetOwnerOrders">Get My Product Orders (as Seller)</button>
+
+                <div class="form-group mt-3">
+                    <label for="confirmTrxOwnerIds">Transaction IDs (Owner Confirm)</label>
+                    <input type="text" class="form-control" id="confirmTrxOwnerIds" placeholder="e.g., 1,2,3">
+                </div>
+                <button class="btn btn-info" id="btnConfirmTrxOwner">Confirm Shipment (by Owner)</button>
+
+                <div class="form-group mt-3">
+                    <label for="confirmTrxUserJson">Transaction IDs (User Confirm with Review)</label>
+                    <textarea class="form-control" id="confirmTrxUserJson" rows="5"
+                        placeholder='{"transaction_ids": [1], "reviews": [{"transaction_id":1, "rating":5, "comment":"Great product!"}]}'></textarea>
+                </div>
+                <button class="btn btn-primary" id="btnConfirmTrxUser">Confirm Receipt (by User)</button>
+
+                <div class="form-group mt-3">
+                    <label for="cancelTrxIds">Transaction IDs (Cancel)</label>
+                    <input type="text" class="form-control" id="cancelTrxIds" placeholder="e.g., 4,5">
+                </div>
+                <button class="btn btn-danger" id="btnCancelTrx">Cancel Transaction</button>
+            </div>
+        </div>
+
+        <!-- Support Endpoints -->
+        <h3 class="section-title">Support Endpoints (User)</h3>
+        <div class="card">
+            <div class="card-header">Support Tickets</div>
+            <div class="card-body">
+                <div class="form-group">
+                    <input type="text" class="form-control" id="createTicketSubject" placeholder="Subject"
+                        value="Issue with login process">
+                </div>
+                <div class="form-group">
+                    <textarea class="form-control" id="createTicketMessage" rows="3" placeholder="Message"
+                        value="I can't login to my account after password reset."></textarea>
+                </div>
+                <button class="btn btn-success" id="btnCreateTicket">Create Support Ticket</button>
+                <button class="btn btn-info mt-3" id="btnGetUserTickets">Get My Support Tickets</button>
+
+                <div class="form-group mt-3">
+                    <label for="ticketId">Ticket ID for Messages/Reply/Cancel</label>
+                    <input type="number" class="form-control" id="ticketId" placeholder="Ticket ID">
+                </div>
+                <button class="btn btn-info" id="btnGetTicketMessages">Get Ticket Messages</button>
+                <div class="form-group mt-3">
+                    <textarea class="form-control" id="replyTicketContent" rows="3" placeholder="Reply Message Content"
+                        value="Thanks for the response!"></textarea>
+                </div>
+                <button class="btn btn-primary" id="btnReplyTicket">Reply Ticket</button>
+                <button class="btn btn-danger mt-3" id="btnCancelTicket">Cancel Ticket</button>
+            </div>
+        </div>
+
+        <!-- File Upload Endpoints -->
+        <h3 class="section-title">File Upload Endpoints</h3>
+        <div class="card">
+            <div class="card-header">Upload File</div>
+            <div class="card-body">
+                <div class="form-group">
+                    <label for="uploadFileType">Upload Type:</label>
+                    <select class="form-control" id="uploadFileType">
+                        <option value="general">General</option>
+                        <option value="chat">Chat</option>
+                        <option value="support">Support</option>
+                        <option value="product">Product</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="imageFile">Upload Image (JPG, PNG, GIF)</label>
+                    <input type="file" class="form-control-file" id="imageFile" accept="image/*">
+                </div>
+                <button class="btn btn-success" id="btnUploadImage">Upload Image</button>
+                <div class="form-group mt-3">
+                    <label for="documentFile">Upload Document (PDF, DOCX, TXT, etc.)</label>
+                    <input type="file" class="form-control-file" id="documentFile"
+                        accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.csv">
+                </div>
+                <button class="btn btn-success" id="btnUploadFile">Upload Document</button>
+            </div>
+        </div>
+
+        <!-- Protected Media Endpoints -->
+        <h3 class="section-title">Protected Media Endpoints</h3>
+        <div class="card">
+            <div class="card-header">Access Protected Media</div>
+            <div class="card-body">
+                <div class="form-group">
+                    <label for="mediaType">Media Type:</label>
+                    <select class="form-control" id="mediaType">
+                        <option value="chat">Chat</option>
+                        <option value="support">Support</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <input type="text" class="form-control" id="mediaFilename"
+                        placeholder="Filename (e.g., your_file.png)">
+                </div>
+                <button class="btn btn-info" id="btnAccessProtectedMedia">Access Media</button>
+            </div>
+        </div>
+
+        <!-- Admin Endpoints -->
+        <h3 class="section-title">Admin Endpoints</h3>
+        <div class="card">
+            <div class="card-header">Admin Actions</div>
+            <div class="card-body">
+                <button class="btn btn-primary" id="btnAdminDashboard">Admin Dashboard</button>
+                <button class="btn btn-primary mt-3" id="btnGetUsersAdmin">Get All Users (Admin)</button>
+
+                <div class="form-group mt-3">
+                    <label for="adminUserId">User ID for Admin Actions</label>
+                    <input type="number" class="form-control" id="adminUserId" placeholder="User ID">
+                </div>
+                <div class="form-group">
+                    <textarea class="form-control" id="adminActionReason" rows="3"
+                        placeholder="Reason for action"></textarea>
+                </div>
+                <div class="form-group">
+                    <input type="number" class="form-control" id="adminBanDuration"
+                        placeholder="Ban Duration (hours, 0 for suspend)">
+                </div>
+                <button class="btn btn-warning" id="btnAdminSuspendUser">Suspend User</button>
+                <button class="btn btn-danger" id="btnAdminBanUser">Ban User</button>
+                <button class="btn btn-success" id="btnAdminUnbanUser">Unban User</button>
+                <button class="btn btn-danger mt-3" id="btnAdminDeleteUser">Delete User</button>
+
+                <button class="btn btn-primary mt-3" id="btnGetProductsAdmin">Get All Products (Admin)</button>
+                <div class="form-group mt-3">
+                    <label for="adminProductId">Product ID for Admin Update</label>
+                    <input type="number" class="form-control" id="adminProductId" placeholder="Product ID">
+                </div>
+                <div class="form-group">
+                    <textarea class="form-control" id="adminPatchProductData" rows="5"
+                        placeholder='{"visibility": "admin_only"}'></textarea>
+                </div>
+                <button class="btn btn-warning" id="btnAdminPatchProduct">Patch Product (Admin)</button>
+
+                <button class="btn btn-primary mt-3" id="btnGetTransactionsAdmin">Get All Transactions (Admin)</button>
+                <div class="form-group mt-3">
+                    <label for="adminTrxId">Transaction ID for Admin Status Update</label>
+                    <input type="number" class="form-control" id="adminTrxId" placeholder="Transaction ID">
+                </div>
+                <div class="form-group">
+                    <select class="form-control" id="adminPatchTrxStatus">
+                        <option value="pending">pending</option>
+                        <option value="waiting_owner">waiting_owner</option>
+                        <option value="waiting_users">waiting_users</option>
+                        <option value="success">success</option>
+                        <option value="cancel">cancel</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <textarea class="form-control" id="adminPatchTrxReason" rows="3"
+                        placeholder="Reason (optional)"></textarea>
+                </div>
+                <button class="btn btn-warning" id="btnAdminPatchTrxStatus">Patch Transaction Status (Admin)</button>
+
+                <button class="btn btn-primary mt-3" id="btnGetBalanceHistoriesAdmin">Get All Balance Histories
+                    (Admin)</button>
+                <button class="btn btn-primary mt-3" id="btnGetTopUpWithdrawLogsAdmin">Get Top-Up/Withdraw Logs
+                    (Admin)</button>
+
+                <button class="btn btn-primary mt-3" id="btnGetSupportTicketsAdmin">Get All Support Tickets
+                    (Admin)</button>
+                <div class="form-group mt-3">
+                    <label for="adminTicketId">Ticket ID for Admin Actions</label>
+                    <input type="number" class="form-control" id="adminTicketId" placeholder="Ticket ID">
+                </div>
+                <button class="btn btn-info" id="btnGetTicketMessagesAdmin">Get Ticket Messages (Admin)</button>
+                <button class="btn btn-success" id="btnAdminClaimTicket">Claim Ticket (Admin)</button>
+                <div class="form-group mt-3">
+                    <textarea class="form-control" id="adminReplyTicketContent" rows="3"
+                        placeholder="Reply Message Content (Admin)"></textarea>
+                </div>
+                <button class="btn btn-primary" id="btnAdminReplyTicket">Reply Ticket (Admin)</button>
+            </div>
+        </div>
+
+        <!-- WebSocket Section -->
+        <h3 class="section-title">WebSocket</h3>
+        <div class="card">
+            <div class="card-header">Notifications WebSocket</div>
+            <div class="card-body">
+                <button class="btn btn-info" id="btnConnectNotificationsWS">Connect Notifications WS</button>
+                <button class="btn btn-danger" id="btnDisconnectNotificationsWS">Disconnect Notifications WS</button>
+                <div class="websocket-log mt-3" id="notificationsLog"></div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">Chat WebSocket</div>
+            <div class="card-body">
+                <div class="form-group">
+                    <label for="chatTransactionId">Transaction ID for Chat</label>
+                    <input type="number" class="form-control" id="chatTransactionId" placeholder="Transaction ID">
+                </div>
+                <button class="btn btn-info" id="btnConnectChatWS">Connect Chat WS</button>
+                <button class="btn btn-danger" id="btnDisconnectChatWS">Disconnect Chat WS</button>
+                <div class="form-group mt-3">
+                    <input type="text" class="form-control" id="chatMessageContent" placeholder="Your chat message">
+                </div>
+                <button class="btn btn-primary" id="btnSendChatMessage">Send Message</button>
+                <div class="websocket-log mt-3" id="chatLog"></div>
+            </div>
+        </div>
+
+    </div> <!-- /container -->
+
+    <script>
+        const API_BASE_URL_INPUT = $('#apiBaseUrl');
+        const WS_BASE_URL_INPUT = $('#wsBaseUrl');
+        const JWT_TOKEN_INPUT = $('#jwtToken');
+        const API_RESPONSE_BOX = $('#apiResponse');
+
+        let notificationsWs = null;
+        let chatWs = null;
+
+        /**
+         * Helper to send AJAX requests
+         * @param {string} method HTTP method (GET, POST, PUT, PATCH, DELETE)
+         * @param {string} urlEndpoint The API endpoint (e.g., 'account/login')
+         * @param {object} data Request body data (optional)
+         * @param {boolean} auth Is authentication required? (default: true)
+         * @returns {Promise<object>} Promise resolving with the response data
+         */
+        function sendApiRequest(method, urlEndpoint, data = null, auth = true) {
+            const baseUrl = API_BASE_URL_INPUT.val();
+            const url = `${baseUrl}/${urlEndpoint}`;
+            const token = JWT_TOKEN_INPUT.val();
+
+            API_RESPONSE_BOX.text('Sending request...');
+            console.log(`Sending ${method} request to ${url}`);
+            if (data) {
+                console.log('Request Data:', data);
+            }
+
+            const ajaxOptions = {
+                url: url,
+                method: method,
+                dataType: 'json', // Expect JSON response
+                contentType: 'application/json', // Send JSON data
+                processData: false, // Don't process data, send as raw JSON
+                headers: {},
+                success: function (response, status, xhr) {
+                    const responseText = JSON.stringify(response, null, 2);
+                    API_RESPONSE_BOX.text(responseText);
+                    console.log(`Response from ${url}:`, response);
+
+                    // Extract JWT from Authorization header if present
+                    if (xhr.getResponseHeader('Authorization')) {
+                        const newAuthHeader = xhr.getResponseHeader('Authorization');
+                        const newToken = newAuthHeader.replace('Bearer ', '');
+                        if (newToken) {
+                            JWT_TOKEN_INPUT.val(newToken);
+                            Swal.fire('Login Success!', 'JWT Token updated!', 'success');
+                        }
+                    } else if (response && response.message && (response.message.includes("Login berhasil!") || response.message.includes("Akun berhasil dibuat!"))) {
+                        // This else if is primarily for the first login/register where the token is not explicit in body
+                        // The token is now dynamically set via xhr.getResponseHeader above.
+                        // This block might become redundant if all login paths send Authorization header.
+                    }
+                    Swal.fire('Success!', response.message || 'Operation successful!', 'success');
+                },
+                error: function (xhr, status, error) {
+                    let errorMessage = 'An unknown error occurred.';
+                    let responseJson = {};
+                    try {
+                        responseJson = JSON.parse(xhr.responseText);
+                        errorMessage = responseJson.message || errorMessage;
+                        if (responseJson.fields) {
+                            errorMessage += "\nDetails:\n" + responseJson.fields.map(f => `${f.field}: ${f.reason}`).join('\n');
+                        }
+                    } catch (e) {
+                        errorMessage = xhr.responseText || errorMessage;
+                    }
+                    API_RESPONSE_BOX.text(`Error: ${xhr.status} - ${errorMessage}`);
+                    console.error(`Error from ${url}:`, xhr.status, error, xhr.responseText);
+                    Swal.fire('Error!', errorMessage, 'error');
+                }
+            };
+
+            // Set headers for file uploads
+            if (urlEndpoint.startsWith('upload/')) {
+                ajaxOptions.contentType = false; // Important for FormData
+                ajaxOptions.processData = false; // Important for FormData
+            } else if (data) {
+                ajaxOptions.data = JSON.stringify(data);
+            }
+
+            if (auth && token) {
+                ajaxOptions.headers['Authorization'] = `Bearer ${token}`;
+            }
+
+            return $.ajax(ajaxOptions);
+        }
+
+        // --- Account Endpoints ---
+        $('#btnRegister').on('click', function () {
+            const data = {
+                full_name: $('#registerFullName').val(),
+                email: $('#registerEmail').val(),
+                password: $('#registerPassword').val()
+            };
+            sendApiRequest('POST', 'account/register', data, false);
+        });
+
+        $('#btnLoginUser').on('click', function () {
+            const data = {
+                email: $('#loginEmail').val(),
+                password: $('#loginPassword').val()
+            };
+            sendApiRequest('POST', 'account/login', data, false);
+        });
+
+        $('#btnLoginAdmin').on('click', function () {
+            const data = {
+                email: $('#loginAdminEmail').val(),
+                password: $('#loginAdminPassword').val()
+            };
+            sendApiRequest('POST', 'admin/login', data, false);
+        });
+
+        $('#btnTopup').on('click', function () {
+            const amount = parseInt($('#topupAmount').val());
+            if (isNaN(amount) || amount <= 0) {
+                Swal.fire('Error!', 'Amount must be a positive number.', 'error');
+                return;
+            }
+            sendApiRequest('POST', 'account/topup', { amount: amount });
+        });
+
+        $('#btnWithdraw').on('click', function () {
+            const amount = parseInt($('#withdrawAmount').val());
+            if (isNaN(amount) || amount < 10000) {
+                Swal.fire('Error!', 'Minimum withdrawal amount is 10,000.', 'error');
+                return;
+            }
+            sendApiRequest('POST', 'account/withdraw', { amount: amount });
+        });
+
+        $('#btnGetBalance').on('click', function () {
+            sendApiRequest('GET', 'account/balance');
+        });
+
+        $('#btnPatchAccount').on('click', function () {
+            const data = {};
+            if ($('#patchFullName').val()) data.full_name = $('#patchFullName').val();
+            if ($('#patchEmail').val()) data.email = $('#patchEmail').val();
+            if ($('#patchOldPassword').val()) data.old_password = $('#patchOldPassword').val();
+            if ($('#patchNewPassword').val()) data.new_password = $('#patchNewPassword').val();
+
+            if (Object.keys(data).length === 0) {
+                Swal.fire('Warning!', 'No fields to update.', 'warning');
+                return;
+            }
+            sendApiRequest('PATCH', 'account', data);
+        });
+
+        // --- Shop Endpoints ---
+        $('#btnGetProducts').on('click', function () {
+            sendApiRequest('GET', 'shop/products');
+        });
+
+        $('#btnPostProduct').on('click', function () {
+            try {
+                const data = JSON.parse($('#postProductData').val());
+                sendApiRequest('POST', 'shop/products', data);
+            } catch (e) {
+                Swal.fire('Error!', 'Invalid JSON for product data.', 'error');
+            }
+        });
+
+        $('#btnPutProduct').on('click', function () {
+            const productId = $('#putProductId').val();
+            if (!productId) {
+                Swal.fire('Error!', 'Product ID is required for update.', 'error');
+                return;
+            }
+            try {
+                const data = JSON.parse($('#putProductData').val());
+                sendApiRequest('PUT', `shop/products/${productId}`, data);
+            } catch (e) {
+                Swal.fire('Error!', 'Invalid JSON for product data.', 'error');
+            }
+        });
+
+        $('#btnDeleteProduct').on('click', function () {
+            const productId = $('#putProductId').val();
+            if (!productId) {
+                Swal.fire('Error!', 'Product ID is required for delete.', 'error');
+                return;
+            }
+            Swal.fire({
+                title: 'Are you sure?',
+                text: "You won't be able to revert this!",
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#3085d6',
+                cancelButtonColor: '#d33',
+                confirmButtonText: 'Yes, delete it!'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    sendApiRequest('DELETE', `shop/products/${productId}`);
+                }
+            });
+        });
+
+        $('#btnToggleProductVisibility').on('click', function () {
+            const productId = $('#patchProductVisibilityId').val();
+            if (!productId) {
+                Swal.fire('Error!', 'Product ID is required.', 'error');
+                return;
+            }
+            sendApiRequest('PATCH', `shop/products/${productId}/visibility`);
+        });
+
+        $('#btnPurchase').on('click', function () {
+            try {
+                const data = JSON.parse($('#purchaseData').val());
+                sendApiRequest('POST', 'shop/purchase', data);
+            } catch (e) {
+                Swal.fire('Error!', 'Invalid JSON for purchase data.', 'error');
+            }
+        });
+
+        $('#btnGetCart').on('click', function () {
+            sendApiRequest('GET', 'shop/orders');
+        });
+
+        $('#btnGetOwnerOrders').on('click', function () {
+            sendApiRequest('GET', 'shop/products/orders');
+        });
+
+        $('#btnConfirmTrxOwner').on('click', function () {
+            const trxIds = $('#confirmTrxOwnerIds').val().split(',').map(id => parseInt(id.trim())).filter(id => !isNaN(id) && id > 0);
+            if (trxIds.length === 0) {
+                Swal.fire('Error!', 'Enter valid transaction IDs.', 'error');
+                return;
+            }
+            sendApiRequest('POST', 'shop/products/orders/confirm-shipment', { transaction_ids: trxIds });
+        });
+
+        $('#btnConfirmTrxUser').on('click', function () {
+            try {
+                const data = JSON.parse($('#confirmTrxUserJson').val());
+                sendApiRequest('POST', 'shop/transactions/confirm-receipt', data);
+            } catch (e) {
+                Swal.fire('Error!', 'Invalid JSON for confirm receipt data.', 'error');
+            }
+        });
+
+        $('#btnCancelTrx').on('click', function () {
+            const trxIds = $('#cancelTrxIds').val().split(',').map(id => parseInt(id.trim())).filter(id => !isNaN(id) && id > 0);
+            if (trxIds.length === 0) {
+                Swal.fire('Error!', 'Enter valid transaction IDs.', 'error');
+                return;
+            }
+            sendApiRequest('POST', 'shop/transactions/cancel', { transaction_ids: trxIds });
+        });
+
+        // --- Support Endpoints (User) ---
+        $('#btnCreateTicket').on('click', function () {
+            const data = {
+                subject: $('#createTicketSubject').val(),
+                message: $('#createTicketMessage').val()
+            };
+            sendApiRequest('POST', 'shop/support/tickets', data);
+        });
+
+        $('#btnGetUserTickets').on('click', function () {
+            sendApiRequest('GET', 'shop/support/tickets');
+        });
+
+        $('#btnGetTicketMessages').on('click', function () {
+            const ticketId = $('#ticketId').val();
+            if (!ticketId) {
+                Swal.fire('Error!', 'Ticket ID is required.', 'error');
+                return;
+            }
+            sendApiRequest('GET', `shop/support/tickets/${ticketId}/messages`);
+        });
+
+        $('#btnReplyTicket').on('click', function () {
+            const ticketId = $('#ticketId').val();
+            if (!ticketId) {
+                Swal.fire('Error!', 'Ticket ID is required.', 'error');
+                return;
+            }
+            const data = {
+                content: $('#replyTicketContent').val(),
+                message_type: "text" // Assuming text for simplicity, could add file upload.
+            };
+            sendApiRequest('POST', `shop/support/tickets/${ticketId}/reply`, data);
+        });
+
+        $('#btnCancelTicket').on('click', function () {
+            const ticketId = $('#ticketId').val();
+            if (!ticketId) {
+                Swal.fire('Error!', 'Ticket ID is required.', 'error');
+                return;
+            }
+            Swal.fire({
+                title: 'Are you sure?',
+                text: "You want to cancel this ticket?",
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#3085d6',
+                cancelButtonColor: '#d33',
+                confirmButtonText: 'Yes, cancel it!'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    sendApiRequest('PATCH', `shop/support/tickets/${ticketId}/cancel`);
+                }
+            });
+        });
+
+        // --- File Upload Endpoints ---
+        function uploadFile(endpoint) {
+            const fileInput = endpoint.includes('image') ? $('#imageFile')[0] : $('#documentFile')[0];
+            const file = fileInput.files[0];
+            const uploadType = $('#uploadFileType').val();
+
+            if (!file) {
+                Swal.fire('Error!', 'No file selected.', 'error');
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append(endpoint.includes('image') ? 'image' : 'file', file);
+            formData.append('type', uploadType); // Add type parameter
+
+            sendApiRequest('POST', `${endpoint}?type=${uploadType}`, formData);
+        }
+
+        $('#btnUploadImage').on('click', function () {
+            uploadFile('upload/image');
+        });
+
+        $('#btnUploadFile').on('click', function () {
+            uploadFile('upload/file');
+        });
+
+        // --- Protected Media Endpoints ---
+        $('#btnAccessProtectedMedia').on('click', function () {
+            const mediaType = $('#mediaType').val();
+            const filename = $('#mediaFilename').val();
+            if (!filename) {
+                Swal.fire('Error!', 'Filename is required.', 'error');
+                return;
+            }
+            // Directly navigate to the URL. If authenticated, the browser will request it with headers.
+            // Note: AJAX for binary data is more complex. Direct link is simpler for testing.
+            const url = `${API_BASE_URL_INPUT.val().replace('/api', '')}/media/${mediaType}/${filename}`;
+            window.open(url, '_blank');
+        });
+
+        // --- Admin Endpoints ---
+        $('#btnAdminDashboard').on('click', function () {
+            sendApiRequest('GET', 'admin/dashboard');
+        });
+
+        $('#btnGetUsersAdmin').on('click', function () {
+            sendApiRequest('GET', 'admin/users');
+        });
+
+        $('#btnAdminSuspendUser').on('click', function () {
+            const userId = $('#adminUserId').val();
+            const reason = $('#adminActionReason').val();
+            if (!userId || !reason) {
+                Swal.fire('Error!', 'User ID and Reason are required.', 'error');
+                return;
+            }
+            sendApiRequest('PATCH', `admin/users/${userId}/suspend`, { reason: reason });
+        });
+
+        $('#btnAdminBanUser').on('click', function () {
+            const userId = $('#adminUserId').val();
+            const reason = $('#adminActionReason').val();
+            const duration = parseInt($('#adminBanDuration').val());
+            if (!userId || !reason || isNaN(duration) || duration <= 0) {
+                Swal.fire('Error!', 'User ID, Reason, and positive Duration (hours) are required.', 'error');
+                return;
+            }
+            sendApiRequest('PATCH', `admin/users/${userId}/ban`, { duration_hours: duration, reason: reason });
+        });
+
+        $('#btnAdminUnbanUser').on('click', function () {
+            const userId = $('#adminUserId').val();
+            if (!userId) {
+                Swal.fire('Error!', 'User ID is required.', 'error');
+            }
+            sendApiRequest('PATCH', `admin/users/${userId}/unban`);
+        });
+
+        $('#btnAdminDeleteUser').on('click', function () {
+            const userId = $('#adminUserId').val();
+            if (!userId) {
+                Swal.fire('Error!', 'User ID is required.', 'error');
+                return;
+            }
+            Swal.fire({
+                title: 'Are you sure?',
+                text: "This will soft delete the user and their products!",
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#3085d6',
+                cancelButtonColor: '#d33',
+                confirmButtonText: 'Yes, delete it!'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    sendApiRequest('DELETE', `admin/users/${userId}`);
+                }
+            });
+        });
+
+        $('#btnGetProductsAdmin').on('click', function () {
+            sendApiRequest('GET', 'admin/products');
+        });
+
+        $('#btnAdminPatchProduct').on('click', function () {
+            const productId = $('#adminProductId').val();
+            if (!productId) {
+                Swal.fire('Error!', 'Product ID is required for admin patch.', 'error');
+                return;
+            }
+            try {
+                const data = JSON.parse($('#adminPatchProductData').val());
+                sendApiRequest('PATCH', `admin/products/${productId}`, data);
+            } catch (e) {
+                Swal.fire('Error!', 'Invalid JSON for product data.', 'error');
+            }
+        });
+
+        $('#btnGetTransactionsAdmin').on('click', function () {
+            sendApiRequest('GET', 'admin/transactions');
+        });
+
+        $('#btnAdminPatchTrxStatus').on('click', function () {
+            const trxId = $('#adminTrxId').val();
+            const status = $('#adminPatchTrxStatus').val();
+            const reason = $('#adminPatchTrxReason').val();
+            if (!trxId || !status) {
+                Swal.fire('Error!', 'Transaction ID and Status are required.', 'error');
+                return;
+            }
+            sendApiRequest('PATCH', `admin/transactions/${trxId}/status`, { status: status, reason: reason });
+        });
+
+        $('#btnGetBalanceHistoriesAdmin').on('click', function () {
+            sendApiRequest('GET', 'admin/balances/history');
+        });
+
+        $('#btnGetTopUpWithdrawLogsAdmin').on('click', function () {
+            sendApiRequest('GET', 'admin/balances/topup-withdraw-logs');
+        });
+
+        $('#btnGetSupportTicketsAdmin').on('click', function () {
+            sendApiRequest('GET', 'admin/support/tickets');
+        });
+
+        $('#btnGetTicketMessagesAdmin').on('click', function () {
+            const ticketId = $('#adminTicketId').val();
+            if (!ticketId) {
+                Swal.fire('Error!', 'Ticket ID is required.', 'error');
+                return;
+            }
+            sendApiRequest('GET', `admin/support/tickets/${ticketId}/messages`);
+        });
+
+        $('#btnAdminClaimTicket').on('click', function () {
+            const ticketId = $('#adminTicketId').val();
+            if (!ticketId) {
+                Swal.fire('Error!', 'Ticket ID is required.', 'error');
+                return;
+            }
+            sendApiRequest('POST', `admin/support/tickets/${ticketId}/claim`);
+        });
+
+        $('#btnAdminReplyTicket').on('click', function () {
+            const ticketId = $('#adminTicketId').val();
+            if (!ticketId) {
+                Swal.fire('Error!', 'Ticket ID is required.', 'error');
+                return;
+            }
+            const data = {
+                content: $('#adminReplyTicketContent').val(),
+                message_type: "text" // Assuming text for simplicity
+            };
+            sendApiRequest('POST', `admin/support/tickets/${ticketId}/reply`, data);
+        });
+
+
+        // --- WebSocket Handlers ---
+        function connectWebSocket(wsUrl, logElement, type) {
+            let ws = null;
+            let currentToken = JWT_TOKEN_INPUT.val();
+
+            if (!currentToken) {
+                Swal.fire('Error!', 'JWT Token is empty. Please login first.', 'error');
+                return null;
+            }
+
+            // Append token as query parameter for websocket handshake
+            // Although the Go backend uses header upgrade, some WS clients might need this for initial connection.
+            // The Go backend also specifically checks the Authorization header from gin context.
+            // For proper WS, the client will send the header during the HTTP Upgrade request.
+            // jQuery/Vanilla JS WebSocket API doesn't directly support adding custom headers to the WS handshake.
+            // A common workaround is to pass it as a query param and then validate server-side, and then upgrade.
+            // OR use a polyfill/library that supports it.
+            // For this example, we rely on the middleware attaching the token from the initial HTTP request.
+
+            // The correct way in vanilla JS is to add a Sec-WebSocket-Protocol header or pass it via URL.
+            // Since our Go server expects an "Authorization" header in the upgrade HTTP request,
+            // standard browser WebSocket API by default does NOT allow setting custom headers for the handshake.
+            // This is a known limitation. A common workaround is passing the token in the URL:
+            const wsFinalUrl = `${wsUrl}?token=${currentToken}`;
+            logElement.append(`<p class="message-system">Connecting to: ${wsFinalUrl}</p>`);
+
+            ws = new WebSocket(wsFinalUrl);
+
+            ws.onopen = function () {
+                logElement.append('<p class="message-system">Connected!</p>');
+                Swal.fire('WS Connected!', `Successfully connected to ${type} WebSocket.`, 'success');
+            };
+
+            ws.onmessage = function (event) {
+                try {
+                    const msg = JSON.parse(event.data);
+                    logElement.append(`<p class="message-incoming">${JSON.stringify(msg, null, 2)}</p>`);
+                } catch (e) {
+                    logElement.append(`<p class="message-incoming">${event.data}</p>`);
+                }
+                logElement.scrollTop(logElement[0].scrollHeight); // Auto-scroll
+            };
+
+            ws.onerror = function (error) {
+                logElement.append(`<p class="message-system" style="color: red;">WebSocket Error: ${error.message || 'Unknown error'}</p>`);
+                Swal.fire('WS Error!', `WebSocket connection to ${type} failed.`, 'error');
+                console.error(`WebSocket Error (${type}):`, error);
+            };
+
+            ws.onclose = function (event) {
+                logElement.append(`<p class="message-system">Disconnected. Code: ${event.code}, Reason: ${event.reason}</p>`);
+                Swal.fire('WS Disconnected!', `WebSocket connection to ${type} closed.`, 'info');
+            };
+            return ws;
+        }
+
+        // Notifications WS
+        $('#btnConnectNotificationsWS').on('click', function () {
+            if (notificationsWs && notificationsWs.readyState === WebSocket.OPEN) {
+                Swal.fire('Already Connected', 'Notifications WebSocket is already open.', 'info');
+                return;
+            }
+            const wsBaseUrl = WS_BASE_URL_INPUT.val();
+            notificationsWs = connectWebSocket(`${wsBaseUrl}/notifications`, $('#notificationsLog'), 'Notifications');
+        });
+
+        $('#btnDisconnectNotificationsWS').on('click', function () {
+            if (notificationsWs) {
+                notificationsWs.close();
+                notificationsWs = null;
+            } else {
+                Swal.fire('Not Connected', 'Notifications WebSocket is not active.', 'info');
+            }
+        });
+
+        // Chat WS
+        $('#btnConnectChatWS').on('click', function () {
+            const chatTrxId = $('#chatTransactionId').val();
+            if (!chatTrxId) {
+                Swal.fire('Error!', 'Transaction ID is required for Chat WebSocket.', 'error');
+                return;
+            }
+            if (chatWs && chatWs.readyState === WebSocket.OPEN) {
+                Swal.fire('Already Connected', 'Chat WebSocket is already open.', 'info');
+                return;
+            }
+            const wsBaseUrl = WS_BASE_URL_INPUT.val();
+            chatWs = connectWebSocket(`${wsBaseUrl}/chat/${chatTrxId}`, $('#chatLog'), 'Chat');
+        });
+
+        $('#btnDisconnectChatWS').on('click', function () {
+            if (chatWs) {
+                chatWs.close();
+                chatWs = null;
+            } else {
+                Swal.fire('Not Connected', 'Chat WebSocket is not active.', 'info');
+            }
+        });
+
+        $('#btnSendChatMessage').on('click', function () {
+            if (!chatWs || chatWs.readyState !== WebSocket.OPEN) {
+                Swal.fire('Error!', 'Chat WebSocket is not connected.', 'error');
+                return;
+            }
+            const messageContent = $('#chatMessageContent').val();
+            if (!messageContent) {
+                Swal.fire('Error!', 'Message content cannot be empty.', 'error');
+                return;
+            }
+            const message = {
+                message_type: "text",
+                content: messageContent
+            };
+            chatWs.send(JSON.stringify(message));
+            $('#chatLog').append(`<p class="message-outgoing">${JSON.stringify(message, null, 2)}</p>`);
+            $('#chatLog').scrollTop($('#chatLog')[0].scrollHeight); // Auto-scroll
+            $('#chatMessageContent').val(''); // Clear input
+        });
+
+        // Initial setup for dummy data and login
+        $(document).ready(function () {
+            // Pre-fill some data if needed for quick testing
+            $('#registerEmail').val(`newuser_${Date.now()}@example.com`);
+            $('#loginEmail').val('budi@user.com'); // Example user
+            $('#loginPassword').val('@users123');
+
+            $('#adminUserId').val('2'); // Example user ID for admin actions
+            $('#adminActionReason').val('Testing suspension: user violated terms.');
+            $('#adminBanDuration').val('24');
+            $('#putProductId').val('1'); // Example product ID
+            $('#patchProductVisibilityId').val('1');
+            $('#purchaseData').val('[{"product_id": 1, "quantity": 1}]'); // Example purchase
+            $('#confirmTrxOwnerIds').val('1'); // Example transaction ID
+            $('#confirmTrxUserJson').val('{"transaction_ids": [1], "reviews": [{"transaction_id":1, "rating":5, "comment":"Cool product!"}]}');
+            $('#cancelTrxIds').val('4');
+            $('#ticketId').val('1'); // Example ticket ID
+            $('#chatTransactionId').val('1'); // Example transaction ID for chat
+            $('#adminProductId').val('1');
+            $('#adminTrxId').val('1');
+            $('#adminTicketId').val('1');
+        });
+
+    </script>
+</body>
+
+</html>
